@@ -61,12 +61,12 @@ A comprehensive catalog of all 43 Claude Trading Skills organized by category. B
 | **Sector Analyst** | Analyzes sector/industry performance charts to assess market positioning and rotation patterns based on market cycle theory (Early/Mid/Late Cycle, Recession) | <span class="badge badge-free">No API</span> |
 | **Breadth Chart Analyst** | Analyzes S&P 500 Breadth Index and Uptrend Stock Ratio charts for market health. Identifies bull market phases: Healthy Breadth, Narrowing, Distribution | <span class="badge badge-free">No API</span> |
 | **Technical Analyst** | Pure technical analysis of weekly price charts. Identifies trends, support/resistance, chart patterns, and momentum indicators. Covers Elliott Wave, Dow Theory, candlesticks | <span class="badge badge-free">No API</span> |
-| **Market News Analyst** | Collects and analyzes market-moving news from the past 10 days via WebSearch. Impact scoring: (Price Impact x Breadth) x Forward Significance | <span class="badge badge-free">No API</span> |
+| **[Market News Analyst]({{ '/en/skills/market-news-analyst/' | relative_url }})** | Collects and analyzes market-moving news from the past 10 days via WebSearch. Impact scoring: (Price Impact x Breadth) x Forward Significance | <span class="badge badge-free">No API</span> |
 | **Market Environment Analysis** | Comprehensive global macro briefing covering equity indices, FX, commodities, yields, and sentiment with structured reporting templates | <span class="badge badge-free">No API</span> |
-| **Market Breadth Analyzer** | Quantifies market breadth health using a data-driven 6-component scoring system (0-100) from publicly available CSV data | <span class="badge badge-free">No API</span> |
+| **[Market Breadth Analyzer]({{ '/en/skills/market-breadth-analyzer/' | relative_url }})** | Quantifies market breadth health using a data-driven 6-component scoring system (0-100) from publicly available CSV data | <span class="badge badge-free">No API</span> |
 | **Uptrend Analyzer** | Diagnoses breadth health using Uptrend Ratio Dashboard tracking ~2,800 US stocks across 11 sectors. 5-component composite scoring with warning overlays | <span class="badge badge-free">No API</span> |
 | **Macro Regime Detector** | Detects structural macro regime transitions (1-2 year horizon) using 6-component cross-asset ratio analysis (RSP/SPY, yield curve, credit, size factor, sector rotation) | <span class="badge badge-api">FMP Required</span> |
-| **US Market Bubble Detector** | Data-driven bubble risk assessment using Minsky/Kindleberger framework. Two-phase evaluation: quantitative scoring (0-12) + strict qualitative adjustment (0-3). Five risk phases | <span class="badge badge-free">No API</span> |
+| **[US Market Bubble Detector]({{ '/en/skills/us-market-bubble-detector/' | relative_url }})** | Data-driven bubble risk assessment using Minsky/Kindleberger framework. Two-phase evaluation: quantitative scoring (0-12) + strict qualitative adjustment (0-3). Five risk phases | <span class="badge badge-free">No API</span> |
 | **Market Top Detector** | Detects market top probability using O'Neil Distribution Days, Minervini Leading Stock Deterioration, and Defensive Rotation. 6-component tactical timing system | <span class="badge badge-free">No API</span> |
 
 ---
@@ -77,7 +77,7 @@ A comprehensive catalog of all 43 Claude Trading Skills organized by category. B
 |-------|-------------|-----------------|
 | **[Theme Detector]({{ '/en/skills/theme-detector/' | relative_url }})** | Detects trending bullish and bearish market themes with 3-dimensional scoring: Theme Heat (0-100), Lifecycle Maturity, and Confidence. 14+ cross-sector themes | <span class="badge badge-free">No API</span> <span class="badge badge-optional">FMP Optional</span> <span class="badge badge-optional">FINVIZ Optional</span> |
 | **Scenario Analyzer** | Builds 18-month scenario projections from news headlines. Dual-agent architecture with 1st/2nd/3rd order effects and recommended tickers | <span class="badge badge-free">No API</span> |
-| **Backtest Expert** | Professional-grade strategy validation framework with hypothesis definition, parameter robustness checks, walk-forward testing, and failure post-mortems | <span class="badge badge-free">No API</span> |
+| **[Backtest Expert]({{ '/en/skills/backtest-expert/' | relative_url }})** | Professional-grade strategy validation framework with hypothesis definition, parameter robustness checks, walk-forward testing, and failure post-mortems | <span class="badge badge-free">No API</span> |
 | **Options Strategy Advisor** | Educational options tool using Black-Scholes pricing. Calculates Greeks (Delta, Gamma, Theta, Vega, Rho), supports 17+ strategies, P/L simulation | <span class="badge badge-optional">FMP Optional</span> |
 | **Pair Trade Screener** | Statistical arbitrage via cointegration testing. Calculates hedge ratios, mean-reversion speed (half-life), and z-score entry/exit signals | <span class="badge badge-api">FMP Required</span> |
 | **Stanley Druckenmiller Investment** | Encodes Druckenmiller's macro positioning philosophy: liquidity analysis, asymmetric risk/reward, conviction sizing, and loss-cutting discipline | <span class="badge badge-free">No API</span> |
@@ -90,8 +90,8 @@ A comprehensive catalog of all 43 Claude Trading Skills organized by category. B
 | Skill | Description | API Requirements |
 |-------|-------------|-----------------|
 | **Portfolio Manager** | Portfolio analysis with Alpaca MCP Server integration. Asset allocation, sector diversification, risk metrics, HOLD/ADD/TRIM/SELL recommendations, rebalancing plans | <span class="badge badge-api">Alpaca Required</span> |
-| **Position Sizer** | Risk-based position sizing using Fixed Fractional, ATR-based, and Kelly Criterion methods. Portfolio constraints (max position %, max sector %). Works offline | <span class="badge badge-free">No API</span> |
-| **US Stock Analysis** | Comprehensive US equity research: fundamentals, technicals, peer comparisons, and structured investment memos with bull/bear cases | <span class="badge badge-free">No API</span> |
+| **[Position Sizer]({{ '/en/skills/position-sizer/' | relative_url }})** | Risk-based position sizing using Fixed Fractional, ATR-based, and Kelly Criterion methods. Portfolio constraints (max position %, max sector %). Works offline | <span class="badge badge-free">No API</span> |
+| **[US Stock Analysis]({{ '/en/skills/us-stock-analysis/' | relative_url }})** | Comprehensive US equity research: fundamentals, technicals, peer comparisons, and structured investment memos with bull/bear cases | <span class="badge badge-free">No API</span> |
 | **Earnings Calendar** | Fetches upcoming earnings announcements via FMP API. Focuses on mid-cap+ companies (>$2B market cap), organized by date and timing (BMO/AMC) | <span class="badge badge-api">FMP Required</span> |
 | **Economic Calendar Fetcher** | Fetches economic events (FOMC, NFP, CPI, GDP) for 7-90 days via FMP API. Impact assessment (High/Medium/Low) with market implications analysis | <span class="badge badge-api">FMP Required</span> |
 
@@ -153,13 +153,13 @@ A comprehensive catalog of all 43 Claude Trading Skills organized by category. B
 
 ### I want to analyze a specific stock
 
-- **US Stock Analysis** -- Full fundamental and technical research report
+- **[US Stock Analysis]({{ '/en/skills/us-stock-analysis/' | relative_url }})** -- Full fundamental and technical research report
 - **Technical Analyst** -- Pure chart-based analysis with pattern identification
 
 ### I want to manage my portfolio
 
 - **Portfolio Manager** -- Real-time holdings analysis and rebalancing with Alpaca integration
-- **Position Sizer** -- Risk-based position sizing with portfolio constraints
+- **[Position Sizer]({{ '/en/skills/position-sizer/' | relative_url }})** -- Risk-based position sizing with portfolio constraints
 
 ### I want to find trending themes
 
@@ -174,7 +174,7 @@ A comprehensive catalog of all 43 Claude Trading Skills organized by category. B
 
 ### I want to validate a strategy
 
-- **Backtest Expert** -- Professional-grade backtesting framework
+- **[Backtest Expert]({{ '/en/skills/backtest-expert/' | relative_url }})** -- Professional-grade backtesting framework
 - **Strategy Pivot Designer** -- Generate new approaches when optimization stalls
 
 ---
