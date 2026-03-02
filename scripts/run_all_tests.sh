@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Run all skill-level tests, one pytest invocation per skill to avoid
-# module-name collisions (multiple skills have scorer.py, helpers.py, etc.).
+# Run all skill-level tests, one pytest invocation per skill.
+# NOTE: With importmode = "importlib" in pyproject.toml, a single
+#   `uv run python -m pytest` also works for bulk execution.
+#   This script is kept for backward compatibility and for isolating
+#   known-failing skills (KNOWN_SKIP).
 #
 # Uses `uv run --extra dev` to ensure pytest and dev dependencies are available
 # regardless of the caller's virtualenv state.

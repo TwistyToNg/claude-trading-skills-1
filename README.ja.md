@@ -2,6 +2,8 @@
 
 このリポジトリは、株式投資やトレードに役立つClaudeスキルをまとめたものです。各スキルには、プロンプト設計、参照資料、補助スクリプトが含まれており、システマティックなバックテスト、マーケット分析、テクニカルチャート分析、経済カレンダー監視、米国株リサーチをClaudeに任せることができます。ClaudeのウェブアプリとClaude Codeの両方で活用できます。
 
+📖 **ドキュメントサイト:** <https://tradermonty.github.io/claude-trading-skills/>
+
 English README is available at [`README.md`](README.md).
 
 ## リポジトリ構成

@@ -2,6 +2,8 @@
 
 Curated Claude skills for equity investors and traders. Each skill bundles prompts, knowledge, and optional helper scripts so Claude can assist with systematic backtesting, market analysis, technical charting, economic calendar monitoring, and US stock research. The repository packages skills for both Claude's web app and Claude Code workflows.
 
+📖 **Documentation site:** <https://tradermonty.github.io/claude-trading-skills/>
+
 日本語版READMEは[`README.ja.md`](README.ja.md)をご覧ください。
 
 ## Repository Layout
