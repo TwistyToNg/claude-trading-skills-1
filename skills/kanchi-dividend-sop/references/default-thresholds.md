@@ -45,6 +45,22 @@ Use this range for yield-trigger alpha:
 - Default baseline: `+0.5pp`.
 - Higher-volatility names: `+0.8pp` to `+1.0pp`.
 
+## Entry Signal Interpretation
+
+When using `build_entry_signals.py`, interpret signals as follows:
+
+| Signal | Meaning | Action |
+|---|---|---|
+| TRIGGERED | Current price <= buy target price | Ready for first tranche (40%) if thesis intact |
+| WAIT | Current price > buy target price | Monitor; set limit order at buy target |
+| ASSUMPTION-REQUIRED | Missing data (yield history or dividend) | Manual research needed before entry |
+
+### Drop Needed Percentage
+
+- `0%`: Price already at or below target.
+- `1-10%`: Near entry zone; consider scaling in if pullback accelerates.
+- `>10%`: Significant gap; wait for pullback or reassess target.
+
 ## Portfolio Constraints
 
 Use these as practical defaults:

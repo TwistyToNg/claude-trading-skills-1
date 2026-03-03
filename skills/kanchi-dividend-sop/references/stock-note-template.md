@@ -34,7 +34,9 @@ Use one memo per ticker. Keep each section concise and evidence-based.
 
 ## Entry Plan (Kanchi Step 5)
 - Trigger type: Yield / Valuation / Both
-- Buy zone:
+  - **Yield trigger**: current yield >= 5y avg yield + alpha (default +0.5pp)
+  - **Valuation trigger**: price reaches target multiple (P/E, P/FFO, P/FCF)
+- Buy zone: $[lower] - $[upper]
 - Split orders: 40% / 30% / 30%
 - Invalidation condition:
 
