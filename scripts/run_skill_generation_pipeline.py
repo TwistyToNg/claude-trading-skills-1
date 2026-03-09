@@ -1103,7 +1103,7 @@ def create_skill_pr(
 
 def write_daily_generation_summary(
     project_root: Path,
-    idea: dict,
+    idea: dict | None,
     skill_name: str,
     report: dict | None,
     pr_url: str | None,
@@ -1119,11 +1119,12 @@ def write_daily_generation_summary(
     if report:
         score = report.get("auto_review", {}).get("score", 0)
 
+    idea_title = idea.get("title", "N/A") if idea else "N/A"
     dry_tag = " (dry-run)" if dry_run else ""
     entry = (
         f"\n## Daily Generation{dry_tag}\n"
         f"- Date: {today}\n"
-        f"- Idea: {idea.get('title', 'N/A')}\n"
+        f"- Idea: {idea_title}\n"
         f"- Skill: {skill_name}\n"
         f"- Score: {score}/100\n"
         f"- PR: {pr_url or 'N/A'}\n"

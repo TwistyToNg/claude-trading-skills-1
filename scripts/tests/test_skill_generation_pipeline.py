@@ -1128,3 +1128,14 @@ def test_write_daily_generation_summary(pipeline_module, tmp_path: Path):
     assert "test-skill" in content
     assert "85/100" in content
     assert pr_url in content
+
+
+def test_write_daily_generation_summary_idea_none(pipeline_module, tmp_path: Path):
+    """Summary handles idea=None without raising."""
+    pipeline_module.write_daily_generation_summary(tmp_path, None, "unknown", None, None)
+
+    summary_files = list((tmp_path / pipeline_module.SUMMARY_DIR).glob("*_daily.md"))
+    assert len(summary_files) == 1
+    content = summary_files[0].read_text(encoding="utf-8")
+    assert "Idea: N/A" in content
+    assert "unknown" in content
