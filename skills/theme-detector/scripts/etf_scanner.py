@@ -154,7 +154,9 @@ class ETFScanner:
             self._fmp_rate_limit()
             self._stats[ctx]["fmp_calls"] += 1
             try:
-                resp = _requests_lib.get(url, params=final_params, headers={"apikey": self._fmp_api_key}, timeout=15)
+                resp = _requests_lib.get(
+                    url, params=final_params, headers={"apikey": self._fmp_api_key}, timeout=15
+                )
                 if resp.status_code == 200:
                     data = resp.json()
                     if data:

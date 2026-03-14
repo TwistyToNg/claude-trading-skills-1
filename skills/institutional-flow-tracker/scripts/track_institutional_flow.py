@@ -57,7 +57,9 @@ class InstitutionalFlowTracker:
         params = {"marketCapMoreThan": market_cap_min, "limit": limit}
 
         try:
-            response = requests.get(url, params=params, headers={"apikey": self.api_key}, timeout=30)
+            response = requests.get(
+                url, params=params, headers={"apikey": self.api_key}, timeout=30
+            )
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
