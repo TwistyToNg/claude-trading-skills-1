@@ -244,15 +244,15 @@ The detector generates:
 7. **Methodology Notes** -- Brief explanation of the scoring model
 
 **Direction classification:**
-- **Bullish:** Weighted performance > 0 AND (uptrend ratio > 50% OR volume accumulation confirmed)
-- **Bearish:** Weighted performance < 0 AND (uptrend ratio < 50% OR volume distribution confirmed)
-- **Neutral:** Mixed signals or insufficient data
 
-**Terminology mapping:**
-- Internal classification: "bullish" / "bearish"
-- Report display: "LEAD" / "LAG"
-- LEAD = relative outperformance of matched industries
-- LAG = relative underperformance of matched industries
+Direction is determined by majority vote of constituent industries' relative rank:
+1. All ~145 industries are ranked by multi-timeframe momentum score
+2. Top-half industries = "bullish", bottom-half = "bearish"
+3. Each theme's direction is the majority vote of its matched industries
+
+**Display mapping:**
+- "bullish" → **LEAD** (relative outperformance of matched industries)
+- "bearish" → **LAG** (relative underperformance of matched industries)
 - A LAG theme may have positive absolute returns -- it indicates relative underperformance, not a short signal
 
 ---

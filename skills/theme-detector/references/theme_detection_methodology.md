@@ -12,9 +12,9 @@ Theme Heat measures the **direction-neutral strength** of a theme. A high heat s
 
 ### Components
 
-#### 1.1 Momentum Score (weight: 35%)
+#### 1.1 Momentum Strength (weight: 35%)
 
-Measures the direction-neutral momentum strength of constituent industries using a log-sigmoid function on multi-timeframe weighted returns (1W 10%, 1M 25%, 3M 35%, 6M 30%).
+Measures the direction-neutral momentum strength using a log-sigmoid function on the absolute weighted return.
 
 **Formula:**
 ```
@@ -22,96 +22,90 @@ weighted_return = perf_1w * 0.10 + perf_1m * 0.25 + perf_3m * 0.35 + perf_6m * 0
 momentum_score = 100 / (1 + exp(-2.0 * (ln(1 + |weighted_return|) - ln(16))))
 ```
 
-Midpoint at |15%| weighted return. Log transform compresses extreme values for better mid-range separation.
+Midpoint at |15%| weighted return. Log transform compresses extreme values for better mid-range separation. Absolute value is used so both strong bullish and strong bearish moves generate high heat.
 
 **Data Source:** FINVIZ industry performance (1W, 1M, 3M, 6M change %)
 
-**Scoring Scale:**
-| Absolute Change % | Score |
-|-------------------|-------|
-| >= 5%             | 100   |
-| 3-5%              | 80    |
-| 1-3%              | 60    |
-| 0.5-1%            | 40    |
-| < 0.5%            | 20    |
+**Example Scores (continuous, not stepped):**
+| |Weighted Return| | Score |
+|---------------------|-------|
+| 0% | ~3 |
+| 5% | ~27 |
+| 15% | 50 (midpoint) |
+| 30% | ~73 |
+| 50% | ~86 |
 
-Note: Absolute value is used so both strong bullish and strong bearish moves generate high heat.
+#### 1.2 Volume Intensity (weight: 20%)
 
-#### 1.2 Volume Score (weight: 20%)
-
-Measures abnormal volume activity across the theme.
+Measures abnormal volume using sqrt scaling on the 20-day/60-day volume ratio.
 
 **Formula:**
 ```
-volume_score = normalize(avg_relative_volume, scale=[0.5, 3.0] -> [0, 100])
-
-avg_relative_volume = MEAN(stock_volume / stock_avg_volume) for all stocks in theme
+ratio = vol_20d / vol_60d
+volume_score = min(100, sqrt(max(0, ratio - 0.8)) / sqrt(1.2) * 100)
 ```
+
+Returns 50.0 if either volume input is None or zero.
 
 **Data Source:** FINVIZ relative volume (volume / avg volume ratio)
 
-**Scoring Scale:**
-| Relative Volume | Score |
-|-----------------|-------|
-| >= 3.0          | 100   |
-| 2.0-3.0         | 80    |
-| 1.5-2.0         | 60    |
-| 1.0-1.5         | 40    |
-| < 1.0           | 20    |
+**Example Scores:**
+| Volume Ratio | Score |
+|-------------|-------|
+| 1.0 | ~37 |
+| 1.2 | ~58 |
+| 1.5 | ~76 |
+| 2.0 | 100 (ceiling) |
 
-#### 1.3 Uptrend Ratio Score (weight: 25%)
+#### 1.3 Uptrend Signal (weight: 25%)
 
-Measures the percentage of stocks in the theme that are in technical uptrends.
+Continuous score from sector uptrend data with base + bonus structure.
+
+**Formula per sector:**
+```
+base = min(80, ratio * 100)        # continuous 0-80
+ma_bonus = 10 if ratio > ma_10     # MA above bonus
+slope_bonus = 10 if slope > 0      # positive slope bonus
+sector_score = base + ma_bonus + slope_bonus  # 0-100
+```
+
+Final score = weighted average of sector scores. For bearish themes, result is inverted (100 - score).
+
+**Data Source:** uptrend-dashboard output (ratio, ma_10, slope per sector)
+
+Returns 50.0 if no sector data available.
+
+#### 1.4 Breadth Signal (weight: 20%)
+
+Measures directionally-aligned industry participation using a power curve with industry count bonus.
 
 **Formula:**
 ```
-uptrend_score = normalize(uptrend_ratio, scale=[0%, 100%] -> [0, 100])
-
-uptrend_ratio = count(stocks_in_uptrend) / count(total_stocks)
+breadth_score = min(100, ratio^2.5 * 80 + count_bonus)
+count_bonus = min(20, industry_count * 2)
 ```
 
-**Data Source:** uptrend-dashboard output (3-point evaluation: price > 50-day SMA, 50-day SMA > 200-day SMA, 200-day SMA rising)
+The ratio is the fraction of matched industries with directionally-aligned weighted returns (positive for LEAD themes, negative for LAG themes). Power curve (exponent 2.5) suppresses low ratios and amplifies high ones.
 
-**If uptrend data is unavailable:** Use price-above-SMA200 as proxy from FINVIZ data. Score is reduced by 20% confidence penalty.
+**Data Source:** Industry-level weighted returns (not stock-level)
 
-**Scoring Scale:**
-| Uptrend Ratio | Score |
-|---------------|-------|
-| >= 80%        | 100   |
-| 60-80%        | 80    |
-| 40-60%        | 60    |
-| 20-40%        | 40    |
-| < 20%         | 20    |
+**Example Scores (no count bonus):**
+| Breadth Ratio | Score |
+|-------------|-------|
+| 0.5 | ~14 |
+| 0.7 | ~33 |
+| 0.9 | ~61 |
+| 1.0 | 80 |
 
-Note: For bearish themes, invert the ratio (use downtrend ratio instead).
-
-#### 1.4 Breadth Score (weight: 20%)
-
-Measures how broadly the theme is participating (not just a few large-cap names).
-
-**Formula:**
-```
-breadth_score = normalize(participation_rate, scale=[0%, 100%] -> [0, 100])
-
-participation_rate = count(stocks_moving_in_direction > 1%) / count(total_stocks)
-```
-
-**Data Source:** FINVIZ stock-level performance data
-
-**Scoring Scale:**
-| Participation Rate | Score |
-|-------------------|-------|
-| >= 80%            | 100   |
-| 60-80%            | 80    |
-| 40-60%            | 60    |
-| 20-40%            | 40    |
-| < 20%             | 20    |
+Returns 50.0 if ratio is None.
 
 ### Theme Heat Composite
 
 ```
-theme_heat = (momentum_score * 0.35) + (volume_score * 0.20) + (uptrend_score * 0.25) + (breadth_score * 0.20)
+theme_heat = (momentum * 0.35) + (volume * 0.20) + (uptrend * 0.25) + (breadth * 0.20)
 ```
+
+Any None sub-score defaults to 50.0. Result clamped to 0-100.
 
 ---
 

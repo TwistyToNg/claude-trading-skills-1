@@ -288,15 +288,15 @@ Save the report to `reports/` directory.
 
 ### Direction Detection Logic
 
-Theme direction (bullish vs. bearish) is determined by:
-1. **Weighted industry performance**: Average change% across constituent industries, weighted by market cap
-2. **Uptrend ratio**: Percentage of stocks in each industry that are in technical uptrends (if uptrend data available)
-3. **Volume confirmation**: Whether volume supports the price direction (accumulation vs. distribution)
+Theme direction is determined by majority vote of constituent industries' relative rank:
 
-A theme is classified as:
-- **Bullish**: Weighted performance > 0 AND (uptrend ratio > 50% OR volume accumulation confirmed)
-- **Bearish**: Weighted performance < 0 AND (uptrend ratio < 50% OR volume distribution confirmed)
-- **Neutral**: Mixed signals or insufficient data
+1. **Industry ranking**: All ~145 industries are ranked by multi-timeframe momentum score
+2. **Rank-based direction**: Industries in the top half of the ranked list are classified as "bullish"; bottom half as "bearish"
+3. **Theme majority vote**: `_majority_direction()` counts bullish vs. bearish industries within each theme; the majority wins
+
+Display mapping: "bullish" → **LEAD**, "bearish" → **LAG** (see `report_generator.py::_direction_label()`)
+
+A LEAD theme indicates relative outperformance of its constituent industries. A LAG theme may still have positive absolute returns — it indicates relative underperformance, not a short signal.
 
 ### Known Limitations
 
