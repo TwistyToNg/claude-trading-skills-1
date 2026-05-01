@@ -1,7 +1,7 @@
 """Tests for calculators.acceleration_calculator."""
 
 import pytest
-from calculators.acceleration_calculator import (
+from acceleration_calculator import (
     acceleration_ratio,
     calculate_acceleration,
     consecutive_green_days,

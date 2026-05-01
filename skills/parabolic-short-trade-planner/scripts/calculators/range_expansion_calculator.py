@@ -8,7 +8,7 @@ for parabolic exhaustion.
 
 from __future__ import annotations
 
-from calculators.atr_calculator import true_range
+from atr_calculator import true_range
 
 
 def calculate_range_expansion(

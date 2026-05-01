@@ -1,6 +1,6 @@
 """Tests for calculators.range_expansion_calculator."""
 
-from calculators.range_expansion_calculator import calculate_range_expansion
+from range_expansion_calculator import calculate_range_expansion
 
 
 class TestRangeExpansion:

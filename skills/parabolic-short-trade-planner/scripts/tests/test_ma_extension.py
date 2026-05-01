@@ -1,6 +1,6 @@
 """Tests for calculators.ma_extension_calculator."""
 
-from calculators.ma_extension_calculator import calculate_ma_extension
+from ma_extension_calculator import calculate_ma_extension
 
 
 def _close_only(closes):

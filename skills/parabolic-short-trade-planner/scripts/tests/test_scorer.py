@@ -1,7 +1,7 @@
 """Tests for scorer.calculate_composite_score and grade_at_or_above."""
 
 import pytest
-from scorer import COMPONENT_WEIGHTS, calculate_composite_score, grade_at_or_above
+from parabolic_scorer import COMPONENT_WEIGHTS, calculate_composite_score, grade_at_or_above
 
 
 def _components(**overrides) -> dict:

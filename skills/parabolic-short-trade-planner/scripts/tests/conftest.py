@@ -15,8 +15,23 @@ import pytest
 
 # Ensure scripts/ is importable as the test package root
 SCRIPTS_DIR = Path(__file__).resolve().parents[1]
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
+CALCULATORS_DIR = SCRIPTS_DIR / "calculators"
+for _p in (str(CALCULATORS_DIR), str(SCRIPTS_DIR)):
+    if _p in sys.path:
+        sys.path.remove(_p)
+    sys.path.insert(0, _p)
+
+# When the full repo test suite runs, other skills (pead-screener, vcp-screener,
+# market-top-detector, ...) may have already imported their own ``calculators``
+# package and ``fmp_client`` module under those exact names. Drop those entries
+# from sys.modules so this skill's imports below resolve to its own files.
+_NAMESPACES_TO_RESET = ("calculators", "fmp_client", "scorer", "report_generator")
+for _key in [
+    k
+    for k in list(sys.modules)
+    if k in _NAMESPACES_TO_RESET or any(k.startswith(p + ".") for p in _NAMESPACES_TO_RESET)
+]:
+    del sys.modules[_key]
 
 
 def _make_bar(date: str, o: float, h: float, low: float, c: float, v: int) -> dict:

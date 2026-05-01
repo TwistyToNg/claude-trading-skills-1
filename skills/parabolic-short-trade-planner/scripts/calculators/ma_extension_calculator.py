@@ -13,9 +13,8 @@ All inputs must be in chronological order (oldest first).
 
 from __future__ import annotations
 
+from atr_calculator import calculate_atr
 from math_helpers import sma
-
-from calculators.atr_calculator import calculate_atr
 
 
 def calculate_ma_extension(

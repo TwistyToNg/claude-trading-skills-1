@@ -11,10 +11,10 @@ CLI knobs (e.g. ``--min-roc-5d``).
 
 from __future__ import annotations
 
-from calculators.acceleration_calculator import calculate_acceleration
-from calculators.liquidity_calculator import calculate_liquidity
-from calculators.ma_extension_calculator import calculate_ma_extension
-from calculators.range_expansion_calculator import calculate_range_expansion
+from acceleration_calculator import calculate_acceleration
+from liquidity_metrics_calculator import calculate_liquidity
+from ma_extension_calculator import calculate_ma_extension
+from range_expansion_calculator import calculate_range_expansion
 
 
 def _clamp(value: float, lo: float = 0.0, hi: float = 100.0) -> float:

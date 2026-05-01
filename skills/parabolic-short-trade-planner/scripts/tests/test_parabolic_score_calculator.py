@@ -1,6 +1,6 @@
 """Tests for calculators.parabolic_score_calculator."""
 
-from calculators.parabolic_score_calculator import (
+from parabolic_score_calculator import (
     calculate_component_scores,
     score_liquidity,
     score_ma_extension,

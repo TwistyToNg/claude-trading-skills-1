@@ -1,7 +1,7 @@
 """Tests for calculators.liquidity_calculator."""
 
 import pytest
-from calculators.liquidity_calculator import (
+from liquidity_metrics_calculator import (
     adv_dollars,
     calculate_liquidity,
     latest_volume_ratio,
