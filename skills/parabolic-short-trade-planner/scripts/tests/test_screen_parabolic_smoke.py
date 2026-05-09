@@ -17,6 +17,26 @@ import screen_parabolic  # noqa: E402
 FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures" / "dry_run_minimal.json"
 
 
+def _flnc_like_fixture(tmp_path, last_earnings_date: str = "2026-04-28"):
+    """Clone the minimal fixture and inject earnings metadata for the
+    parabolic XYZ symbol so it simulates an FLNC-like post-earnings move.
+
+    ``last_earnings_date`` defaults to 2026-04-28 (Tuesday) → 2 trading
+    days before the XYZ fixture's latest bar 2026-04-30 (Thursday).
+    """
+    fixture = json.loads(FIXTURE_PATH.read_text())
+    for sym in fixture["symbols"]:
+        if sym["ticker"] == "XYZ":
+            sym["last_earnings_date"] = last_earnings_date
+            sym["market_data_as_of"] = "2026-04-30"
+            # Leave trading_days_since_earnings unset to exercise the
+            # "compute from last_earnings_date" branch in run_dry_run.
+            break
+    out_path = tmp_path / "dry_run_with_earnings.json"
+    out_path.write_text(json.dumps(fixture))
+    return out_path
+
+
 def _make_args(**overrides):
     parser = screen_parabolic.build_arg_parser()
     args = parser.parse_args(
@@ -97,6 +117,54 @@ class TestRejectionLogging:
         assert any("threshold not met" in line for line in rejection_lines), (
             f"Expected a 'threshold not met' rejection reason; got {rejection_lines}"
         )
+
+
+class TestRecentEarningsCatalystWarning:
+    """When the fixture supplies a ``last_earnings_date`` within the
+    catalyst window, the screener must emit the
+    ``recent_earnings_catalyst`` warning. This is the FLNC-style
+    post-earnings parabolic case that motivated the fix."""
+
+    def test_warning_appears_for_recent_earnings(self, tmp_path):
+        fixture = _flnc_like_fixture(tmp_path, last_earnings_date="2026-04-28")
+        args = _make_args()
+        candidates = screen_parabolic.run_dry_run(str(fixture), args)
+        xyz = next(c for c in candidates if c["ticker"] == "XYZ")
+        assert "recent_earnings_catalyst" in xyz["warnings"]
+        assert xyz["last_earnings_date"] == "2026-04-28"
+        # 2026-04-28 (Tue) → 2026-04-30 (Thu): Wed + Thu = 2 trading days.
+        assert xyz["trading_days_since_earnings"] == 2
+        # Forward-looking blackout fields are independent.
+        assert xyz["earnings_within_2d"] is False
+        assert xyz["earnings_in_blackout_window"] is False
+        assert xyz["market_data_as_of"] == "2026-04-30"
+
+    def test_warning_absent_outside_catalyst_window(self, tmp_path):
+        # 2026-03-13 (Fri) is well beyond the default 10-trading-day window
+        # from market_data_as_of 2026-04-30.
+        fixture = _flnc_like_fixture(tmp_path, last_earnings_date="2026-03-13")
+        args = _make_args()
+        candidates = screen_parabolic.run_dry_run(str(fixture), args)
+        xyz = next(c for c in candidates if c["ticker"] == "XYZ")
+        assert "recent_earnings_catalyst" not in xyz["warnings"]
+
+    def test_top_level_market_data_as_of_propagates(self, tmp_path):
+        fixture = _flnc_like_fixture(tmp_path, last_earnings_date="2026-04-28")
+        args = _make_args()
+        candidates = screen_parabolic.run_dry_run(str(fixture), args)
+        report = screen_parabolic.build_json_report(
+            candidates=candidates,
+            mode=args.mode,
+            universe=args.universe,
+            as_of=args.as_of,
+            run_date=args.as_of,
+            data_source="fixture",
+        )
+        # XYZ is the only surviving candidate, so the unique-date branch
+        # should set top-level market_data_as_of without a mixed warning.
+        assert report["market_data_as_of"] == "2026-04-30"
+        assert "mixed_market_data_as_of" not in report["warnings"]
+        assert report["as_of"] == report["run_date"] == "2026-04-30"
 
 
 class TestMainCLI:
