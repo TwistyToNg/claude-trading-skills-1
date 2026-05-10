@@ -75,7 +75,11 @@ LABELS: dict[str, dict[str, str]] = {
             "個人トレーダー OS の運用ワークフロー manifest 群です。各ワークフローは"
             "使用するスキル・判断ゲート・artifact の流れを順番通りに記述しています。"
             "[`workflows/`](https://github.com/tradermonty/claude-trading-skills/tree/main/workflows) "
-            "以下の manifest が正本で、本ページはそこから自動生成されます。"
+            "以下の manifest が正本で、本ページはそこから自動生成されます。\n\n"
+            "**翻訳方針:** 本ページは見出しラベルのみ日本語化しています。"
+            "manifest 本文（`when_to_run` / `decision_question` / `manual_review` 等）は"
+            "英語正本をそのまま表示します。本文の日本語化は将来の対応予定です（manifest 側に "
+            "`*_ja` フィールドを追加するか、別のローカライズ層を設ける方向で検討中）。"
         ),
         "auto_generated_note": (
             "このページは `scripts/generate_workflow_docs.py` によって自動生成されます。"
@@ -347,7 +351,10 @@ def render_page(workflows: list[dict], lang: str) -> str:
     buf.write("---\n\n")
     for wf in workflows:
         buf.write(render_workflow_section(wf, labels))
-    return buf.getvalue()
+    # Normalize trailing newlines to a single \n so generator output stays
+    # in lockstep with the end-of-file-fixer pre-commit hook. Otherwise
+    # --check would always drift after the fixer trims the page.
+    return buf.getvalue().rstrip("\n") + "\n"
 
 
 # ---------------------------------------------------------------------------
