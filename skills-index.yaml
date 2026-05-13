@@ -309,7 +309,7 @@ skills:
   display_name: Edge Strategy Reviewer
   category: strategy-research
   status: production
-  summary: '>.'
+  summary: Critically review strategy drafts from edge-strategy-designer for edge plausibility, overfitting risk, sample size adequacy, and execution realism.
   timeframe: unknown
   difficulty: unknown
   integrations:
@@ -657,7 +657,7 @@ skills:
   display_name: Scenario Analyzer
   category: strategy-research
   status: production
-  summary: '|.'
+  summary: Analyze 18-month scenarios from news headlines via scenario-analyst agent with strategy-reviewer second opinion; outputs primary/secondary/tertiary impact analysis and stock picks in Japanese.
   timeframe: unknown
   difficulty: unknown
   integrations:
@@ -830,7 +830,7 @@ skills:
   display_name: Trade Hypothesis Ideator
   category: trade-memory
   status: production
-  summary: '>.'
+  summary: Generate falsifiable trade strategy hypotheses from market data, trade logs, and journal snippets with ranked hypothesis cards and optional strategy.yaml export.
   timeframe: unknown
   difficulty: unknown
   integrations:

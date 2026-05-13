@@ -131,6 +131,38 @@ def test_render_includes_integrations_with_badges() -> None:
     assert "`finviz` optional" in out
 
 
+def test_render_escapes_pipe_in_summary() -> None:
+    """A literal '|' in summary must be backslash-escaped or it breaks the table."""
+    skills = [
+        make_skill(
+            "pipe-skill",
+            category="market-regime",
+            summary="Use a|b notation to separate options.",
+        )
+    ]
+    out = render_catalog_en(skills)
+    # The escaped form must be present
+    assert "a\\|b" in out
+    # The bare form must NOT survive (would break the table)
+    assert "a|b" not in out.replace("a\\|b", "")
+
+
+def test_render_escapes_newline_in_summary() -> None:
+    """Newlines in summary must collapse to spaces so the table row stays on one line."""
+    skills = [
+        make_skill(
+            "nl-skill",
+            category="market-regime",
+            summary="Line one.\nLine two.",
+        )
+    ]
+    out = render_catalog_en(skills)
+    # The row containing this skill must not contain an embedded newline mid-row
+    rows = [line for line in out.splitlines() if "nl-skill" in line]
+    assert len(rows) == 1
+    assert "Line one. Line two." in rows[0]
+
+
 def test_render_is_deterministic_when_skill_order_varies() -> None:
     """Within a category, skills should be sorted by id."""
     skills = [

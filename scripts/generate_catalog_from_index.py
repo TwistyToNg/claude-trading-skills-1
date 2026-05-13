@@ -108,6 +108,16 @@ def _primary_integrations(skill: dict) -> str:
     return ", ".join(parts)
 
 
+def _escape_table_cell(text: str) -> str:
+    """Escape characters that would break a Markdown table cell.
+
+    Pipes (|) terminate columns and must be backslash-escaped. Newlines
+    inside a cell are collapsed to spaces so a multi-line summary does
+    not span multiple table rows.
+    """
+    return text.replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").strip()
+
+
 # ---------------------------------------------------------------------------
 # Rendering — one renderer per `name` sentinel
 # ---------------------------------------------------------------------------
@@ -139,9 +149,9 @@ def render_catalog_en(skills: list[dict]) -> str:
         buf.write("|---|---|---|---|\n")
         for s in items:
             sid = s.get("id", "")
-            display_name = s.get("display_name", sid)
-            summary = (s.get("summary") or "").replace("\n", " ").strip()
-            status = s.get("status", "")
+            display_name = _escape_table_cell(s.get("display_name", sid))
+            summary = _escape_table_cell(s.get("summary") or "")
+            status = _escape_table_cell(s.get("status", ""))
             integs = _primary_integrations(s)
             buf.write(f"| **{display_name}** (`{sid}`) | {summary} | {integs} | {status} |\n")
         buf.write("\n")
@@ -174,9 +184,9 @@ def render_catalog_ja(skills: list[dict]) -> str:
         buf.write("|---|---|---|---|\n")
         for s in items:
             sid = s.get("id", "")
-            display_name = s.get("display_name", sid)
-            summary = (s.get("summary") or "").replace("\n", " ").strip()
-            status = s.get("status", "")
+            display_name = _escape_table_cell(s.get("display_name", sid))
+            summary = _escape_table_cell(s.get("summary") or "")
+            status = _escape_table_cell(s.get("status", ""))
             integs = _primary_integrations(s)
             buf.write(f"| **{display_name}** (`{sid}`) | {summary} | {integs} | {status} |\n")
         buf.write("\n")
