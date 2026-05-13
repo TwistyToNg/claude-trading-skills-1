@@ -200,35 +200,70 @@ pre-commit install && pre-commit install --hook-type pre-push
 
 #### API Requirements by Skill
 
+The table below is **auto-generated** from `skills-index.yaml` by `scripts/generate_catalog_from_index.py`. To update a row, edit the skill's `integrations[]` in the index and re-run the generator. The 3-column shape (FMP / FINVIZ / Alpaca) is preserved so existing setup instructions still apply; non-paid integrations (CSV, image, WebSearch, MCP, calculation-only, etc.) surface in the Notes column.
+
+<!-- skills-index:start name="api-matrix" -->
+<!-- This table is auto-generated from skills-index.yaml by scripts/generate_catalog_from_index.py. Do not edit by hand — edit the index and re-run the generator. -->
+
 | Skill | FMP API | FINVIZ Elite | Alpaca | Notes |
 |-------|---------|--------------|--------|-------|
-| **Economic Calendar Fetcher** | ✅ Required | ❌ Not used | ❌ Not used | Fetches economic events from FMP |
-| **Earnings Calendar** | ✅ Required | ❌ Not used | ❌ Not used | Fetches earnings dates from FMP |
-| **Institutional Flow Tracker** | ✅ Required | ❌ Not used | ❌ Not used | 13F filings analysis; free tier sufficient |
-| **Value Dividend Screener** | ✅ Required | 🟡 Optional (Recommended) | ❌ Not used | FMP for analysis; FINVIZ reduces execution time by 70-80% |
-| **Dividend Growth Pullback Screener** | ✅ Required | 🟡 Optional (Recommended) | ❌ Not used | FMP for analysis; FINVIZ for RSI pre-screening |
-| **Pair Trade Screener** | ✅ Required | ❌ Not used | ❌ Not used | Statistical arbitrage analysis |
-| **Earnings Trade Analyzer** | ❌ Not required | ❌ Not used | ❌ Not used | Uses yfinance by default; FMP optional via --api-key |
-| **PEAD Screener** | ✅ Required | ❌ Not used | ❌ Not used | Weekly candle PEAD analysis; free tier sufficient |
-| **IBD Distribution Day Monitor** | ❌ Not required | ❌ Not used | ❌ Not used | Uses yfinance by default; FMP optional via --api-key |
-| **Options Strategy Advisor** | 🟡 Optional | ❌ Not used | ❌ Not used | FMP for stock data; Black-Scholes works without |
-| **Portfolio Manager** | ❌ Not used | ❌ Not used | ✅ Required | Real-time holdings via Alpaca MCP Server |
-| Sector Analyst | ❌ Not required | ❌ Not used | ❌ Not used | Image-based chart analysis |
-| Technical Analyst | ❌ Not required | ❌ Not used | ❌ Not used | Image-based chart analysis |
-| Breadth Chart Analyst | ❌ Not required | ❌ Not used | ❌ Not used | Image-based chart analysis |
-| Market News Analyst | ❌ Not required | ❌ Not used | ❌ Not used | Uses WebSearch/WebFetch |
-| US Stock Analysis | ❌ Not required | ❌ Not used | ❌ Not used | User provides data |
-| Backtest Expert | ❌ Not required | ❌ Not used | ❌ Not used | User provides strategy parameters |
-| US Market Bubble Detector | ❌ Not required | ❌ Not used | ❌ Not used | User provides indicators |
-| **Theme Detector** | 🟡 Optional | 🟡 Optional (Recommended) | ❌ Not used | FINVIZ for dynamic stocks; FMP for ETF holdings fallback |
-| **FinViz Screener** | ❌ Not required | 🟡 Optional | ❌ Not used | Public screener free; Elite auto-detected from env var |
-| **Position Sizer** | ❌ Not required | ❌ Not used | ❌ Not used | Pure calculation; works offline |
-| **Parabolic Short Trade Planner** | ✅ Required | ❌ Not used | 🟡 Optional | FMP for screener; Alpaca optional (`requests` direct, no SDK). Without Alpaca, every candidate flips to `plan_status: watch_only` |
-| **Data Quality Checker** | ❌ Not required | ❌ Not used | ❌ Not used | Local markdown validation; works offline |
-| **Edge Strategy Reviewer** | ❌ Not required | ❌ Not used | ❌ Not used | Deterministic scoring on local YAML drafts |
-| **Edge Pipeline Orchestrator** | ❌ Not required | ❌ Not used | ❌ Not used | Orchestrates local edge skills via subprocess |
-| **Trader Memory Core** | 🟡 Optional | ❌ Not used | ❌ Not used | FMP only for MAE/MFE in postmortem |
-| Dual-Axis Skill Reviewer | ❌ Not required | ❌ Not used | ❌ Not used | Deterministic scoring + optional LLM review |
+| **Backtest Expert** | ❌ Not used | ❌ Not used | ❌ Not used | User provides strategy parameters |
+| **Breadth Chart Analyst** | ❌ Not used | ❌ Not used | ❌ Not used | Chart screenshot input |
+| **Breakout Trade Planner** | ❌ Not used | ❌ Not used | ❌ Not used | Consumes VCP screener output; pure calculation + Alpaca order templates |
+| **CANSLIM Screener** | ✅ Required | ❌ Not used | ❌ Not used | US stock fundamentals via FMP |
+| **Data Quality Checker** | ❌ Not used | ❌ Not used | ❌ Not used | Local markdown validation; works offline |
+| **Dividend Growth Pullback Screener** | ✅ Required | 🟡 Optional (Recommended) | ❌ Not used | Financial Modeling Prep API |
+| **Downtrend Duration Analyzer** | ❌ Not used | ❌ Not used | ❌ Not used | Duration analysis from market data; pure calculation |
+| **Dual Axis Skill Reviewer** | ❌ Not used | ❌ Not used | ❌ Not used | Deterministic scoring + optional LLM review |
+| **Earnings Calendar** | ✅ Required | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **Earnings Trade Analyzer** | ✅ Required | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **Economic Calendar Fetcher** | ✅ Required | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **Edge Candidate Agent** | 🟡 Optional | ❌ Not used | ❌ Not used | Optional OHLCV via FMP for edge ticket export |
+| **Edge Concept Synthesizer** | ❌ Not used | ❌ Not used | ❌ Not used | Synthesizes detector tickets and hints into edge concepts |
+| **Edge Hint Extractor** | ❌ Not used | ❌ Not used | ❌ Not used | Extracts hints from observations/news; pure calculation |
+| **Edge Pipeline Orchestrator** | ❌ Not used | ❌ Not used | ❌ Not used | Orchestrates edge pipeline subskills via subprocess |
+| **Edge Signal Aggregator** | ❌ Not used | ❌ Not used | ❌ Not used | Aggregates signals from edge-finding skills |
+| **Edge Strategy Designer** | ❌ Not used | ❌ Not used | ❌ Not used | Converts edge concepts into strategy drafts |
+| **Edge Strategy Reviewer** | ❌ Not used | ❌ Not used | ❌ Not used | Deterministic scoring on local YAML drafts |
+| **Exposure Coach** | ❌ Not used | ❌ Not used | ❌ Not used | Synthesizes signals from other skills; pure calculation |
+| **FTD Detector** | ✅ Required | ❌ Not used | ❌ Not used | Daily QQQ/SPY OHLCV via FMP |
+| **Finviz Screener** | ❌ Not used | 🟡 Optional | ❌ Not used | FINVIZ Elite API |
+| **IBD Distribution Day Monitor** | ✅ Required | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **Institutional Flow Tracker** | ✅ Required | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **Kanchi Dividend Review Monitor** | 🟡 Optional (Recommended) | ❌ Not used | ❌ Not used | Dividend / price monitoring via FMP |
+| **Kanchi Dividend SOP** | 🟡 Optional (Recommended) | ❌ Not used | ❌ Not used | US dividend stock data via FMP |
+| **Kanchi Dividend US Tax Accounting** | ❌ Not used | ❌ Not used | ❌ Not used | US tax workflow guidance; pure calculation |
+| **Macro Regime Detector** | ❌ Not used | ❌ Not used | ❌ Not used | Cross-asset ratio data via yfinance or local CSV |
+| **Market Breadth Analyzer** | ❌ Not used | ❌ Not used | ❌ Not used | TraderMonty public CSV; no API key required |
+| **Market Environment Analysis** | ❌ Not used | ❌ Not used | ❌ Not used | Global market data via WebSearch / WebFetch; Optional chart image inputs for technical interpretation |
+| **Market News Analyst** | ❌ Not used | ❌ Not used | ❌ Not used | Web search / fetch |
+| **Market Top Detector** | ❌ Not used | ❌ Not used | ❌ Not used | Public market data CSVs; no API key required |
+| **Options Strategy Advisor** | 🟡 Optional | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **PEAD Screener** | ✅ Required | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **Pair Trade Screener** | ✅ Required | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **Parabolic Short Trade Planner** | ✅ Required | ❌ Not used | 🟡 Optional | Financial Modeling Prep API |
+| **Portfolio Manager** | ❌ Not used | ❌ Not used | ✅ Required | Alpaca brokerage MCP/API |
+| **Position Sizer** | ❌ Not used | ❌ Not used | ❌ Not used | Pure calculation; works offline |
+| **Scenario Analyzer** | ❌ Not used | ❌ Not used | ❌ Not used | Headline / news search via WebSearch |
+| **Sector Analyst** | ❌ Not used | ❌ Not used | ❌ Not used | Chart screenshot input |
+| **Signal Postmortem** | ❌ Not used | ❌ Not used | ❌ Not used | Postmortem framework; pure calculation |
+| **Skill Designer** | ❌ Not used | ❌ Not used | ❌ Not used | Generates skill scaffolding from idea specs |
+| **Skill Idea Miner** | ❌ Not used | ❌ Not used | ❌ Not used | Mines session logs for skill ideas |
+| **Skill Integration Tester** | ❌ Not used | ❌ Not used | ❌ Not used | Validates multi-skill workflow contracts |
+| **Stanley Druckenmiller Investment** | ❌ Not used | ❌ Not used | ❌ Not used | Synthesizes outputs from upstream skills; pure calculation |
+| **Strategy Pivot Designer** | ❌ Not used | ❌ Not used | ❌ Not used | Pivot proposal generator; pure calculation |
+| **Technical Analyst** | ❌ Not used | ❌ Not used | ❌ Not used | Chart screenshot input |
+| **Theme Detector** | 🟡 Optional | 🟡 Optional (Recommended) | ❌ Not used | Financial Modeling Prep API |
+| **Trade Hypothesis Ideator** | ❌ Not used | ❌ Not used | ❌ Not used | Hypothesis generation from journal/data inputs; pure calculation |
+| **Trader Memory Core** | 🟡 Optional | ❌ Not used | ❌ Not used | Financial Modeling Prep API |
+| **US Market Bubble Detector** | ❌ Not used | ❌ Not used | ❌ Not used | User provides indicators |
+| **US Stock Analysis** | ❌ Not used | ❌ Not used | ❌ Not used | User provides data |
+| **Uptrend Analyzer** | ❌ Not used | ❌ Not used | ❌ Not used | Monty Uptrend Ratio Dashboard CSV; no API key required |
+| **VCP Screener** | ✅ Required | ❌ Not used | ❌ Not used | S&P 500 OHLCV via FMP |
+| **Value Dividend Screener** | ✅ Required | 🟡 Optional (Recommended) | ❌ Not used | Financial Modeling Prep API |
+<!-- skills-index:end name="api-matrix" -->
+
+> Note: a skill listed as `❌ Not used` for FMP / FINVIZ / Alpaca may still need WebSearch, public CSVs, chart screenshots, or other non-paid inputs. See each skill's full `integrations[]` entry in `skills-index.yaml` for the complete picture.
 
 #### API Key Setup
 
@@ -298,29 +333,6 @@ All API scripts follow this pattern:
 3. Provide clear error messages if key missing
 4. Support both methods for CLI, Desktop, and Web environments
 5. Handle rate limits gracefully with retry logic
-
-### Local Market Data Cache
-
-Several skills share a SQLite cache at `state/market_cache.db` (project root). The cache is managed by `scripts/cache_manager.py` and is used by:
-
-- `skills/vcp-screener/scripts/yf_client.py`
-- `skills/ibd-distribution-day-monitor/scripts/yf_client.py`
-- `skills/earnings-trade-analyzer/scripts/yf_client.py`
-
-**Cache tables:**
-| Table | Content | TTL |
-|-------|---------|-----|
-| `price_bar` | OHLCV per (symbol, date) | 7-day full refresh; incremental otherwise |
-| `company_profile` | name / sector / mktCap / price | 7 days |
-| `earnings_scan` | per-symbol earnings found/not-found | 24 hours |
-| `universe` | S&P 500 symbol list | 30 days |
-
-**Incremental OHLCV logic (avoids re-downloading on every run):**
-- ≤1 day stale → served from cache, zero network calls
-- 2–7 days stale → only missing bars fetched (one small `yf.download()` batch)
-- >7 days stale or no data → full re-download (catches split/dividend adjustments)
-
-The `state/` directory is git-ignored. Delete `state/market_cache.db` to force a full re-download on next run.
 
 ### Running Helper Scripts
 
@@ -392,19 +404,16 @@ python3 pair-trade-screener/scripts/find_pairs.py \
   --lookback-days 365
 ```
 
-**Earnings Trade Analyzer:** No API key required (yfinance default); FMP optional
+**Earnings Trade Analyzer:** ⚠️ Requires FMP API key
 ```bash
-# Default: 2-day lookback, top 20 results (uses yfinance, no key needed)
+# Default: 2-day lookback, top 20 results
 python3 skills/earnings-trade-analyzer/scripts/analyze_earnings_trades.py \
   --output-dir reports/
 
 # Custom parameters with entry quality filter
 python3 skills/earnings-trade-analyzer/scripts/analyze_earnings_trades.py \
-  --lookback-days 3 --top 10 --apply-entry-filter --output-dir reports/
-
-# With FMP API key for faster earnings calendar (optional)
-python3 skills/earnings-trade-analyzer/scripts/analyze_earnings_trades.py \
-  --api-key YOUR_FMP_KEY --output-dir reports/
+  --lookback-days 3 --top 10 --max-api-calls 200 \
+  --apply-entry-filter --output-dir reports/
 ```
 
 **PEAD Screener:** ⚠️ Requires FMP API key
@@ -723,7 +732,21 @@ These skills fetch future events via FMP API:
 
 ## Multi-Skill Workflows
 
-Skills are designed to be combined for comprehensive analysis:
+> **Canonical source:** `workflows/*.yaml` is the authoritative definition of multi-skill workflows for the Core + Satellite primary user. The prose examples below are quickstart sketches only — if any block here disagrees with a manifest in `workflows/`, the YAML is correct. See [`workflows/README.md`](workflows/README.md) for the manifest schema and `docs/dev/metadata-and-workflow-schema.md` for the full validator rules.
+
+### Canonical workflows (PR2)
+
+| Workflow | Cadence | Required skills |
+|---|---|---|
+| [`market-regime-daily`](workflows/market-regime-daily.yaml) | daily | market-breadth-analyzer, uptrend-analyzer, exposure-coach |
+| [`core-portfolio-weekly`](workflows/core-portfolio-weekly.yaml) | weekly | portfolio-manager, trader-memory-core |
+| [`swing-opportunity-daily`](workflows/swing-opportunity-daily.yaml) | daily | vcp-screener, technical-analyst, position-sizer, trader-memory-core |
+| [`trade-memory-loop`](workflows/trade-memory-loop.yaml) | per closed trade | trader-memory-core, signal-postmortem |
+| [`monthly-performance-review`](workflows/monthly-performance-review.yaml) | monthly | trader-memory-core, signal-postmortem |
+
+### Quickstart prose examples (NOT canonical)
+
+The blocks below are informal sketches kept for skills not yet covered by a YAML manifest. They are quickstart help, not contracts. When in doubt, defer to the YAML manifests above.
 
 **Daily Market Monitoring:**
 1. Economic Calendar Fetcher → Check today's events
@@ -754,6 +777,7 @@ Skills are designed to be combined for comprehensive analysis:
 2. Review asset allocation and risk metrics
 3. Market Environment Analysis → Assess macro conditions
 4. Execute rebalancing plan with buy/sell actions
+> The canonical version of this routine is [`core-portfolio-weekly.yaml`](workflows/core-portfolio-weekly.yaml).
 
 **Earnings Momentum Trading:**
 1. Earnings Trade Analyzer → Score recent earnings reactions (5-factor: gap, trend, volume, MA200, MA50)
@@ -885,71 +909,3 @@ ZIP packages allow Claude web app users to upload and use skills without cloning
 - Include setup instructions for both environment variables and command-line arguments
 - Provide links to API registration and pricing pages
 - Distinguish between required APIs (skill won't work without) and optional APIs (enhances performance)
-
-## Trading Intelligence Dashboard
-
-A local Flask web dashboard (`dashboard/app.py`) aggregates all skill outputs into a single decision-support UI. Start it with:
-
-```bash
-cd dashboard && python app.py
-# Opens at http://localhost:5050
-```
-
-### Architecture
-
-- **Backend**: `dashboard/app.py` — Flask app serving `/api/data`, `/api/run`, `/api/history/<symbol>`
-- **Frontend**: `dashboard/templates/dashboard.html` — Single-page app with 7-step trading workflow
-- **Data flow**: Scripts write JSON to `reports/` → `/api/data` reads latest files → JS renders them
-
-### `/api/data` Response Fields
-
-| Field | Source Script | Description |
-|-------|--------------|-------------|
-| `breadth` | `market-breadth-analyzer` | Composite 0-100 score, zone (Strong/Healthy/Neutral/Weakening/Critical) |
-| `uptrend` | `uptrend-analyzer` | Composite 0-100 score, zone (StrongBull/Bull/Neutral/Cautious/Bear), warnings |
-| `ibd` | `ibd-distribution-day-monitor` | Distribution day counts, portfolio action |
-| `exposure` | `exposure-coach` | Recommendation (REDUCE_ONLY/CAUTIOUS/BULLISH), ceiling % |
-| `vcp` | `vcp-screener` | VCP pattern candidates with quality grades |
-| `breakout_plan` | `breakout-trade-planner` | Buy price, stop loss, target, shares per candidate |
-| `downtrend` | `downtrend-duration-analyzer` | Historical correction duration stats by sector/market cap |
-| `earnings_trade` | `earnings-trade-analyzer` | Post-earnings momentum candidates with A-D grades |
-
-### `/api/run` Parameters
-
-Accepts `?market=US&account_size=50000&risk_pct=0.5&target_r=2.0`. Runs all scripts in sequence, then saves a full snapshot to the `analysis_run` SQLite table. Returns a log of pass/fail per script plus `run_at` timestamp. Scripts run with `PYTHONIOENCODING=utf-8` to avoid Windows cp1252 encoding errors.
-
-### Report History Database
-
-Analysis snapshots are stored in `state/market_cache.db` (`analysis_run` table) alongside the price cache. Every `/api/run` call saves a complete JSON snapshot so historical data can be queried without re-running scripts.
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/data?market=US` | Latest snapshot from DB (falls back to JSON files on first run) |
-| `GET /api/data?market=US&at=2026-05-12T09:00:00` | Historical snapshot at exact timestamp |
-| `GET /api/runs?market=US&limit=50` | List of all run timestamps, newest first |
-| `GET /api/db/stats` | DB summary: run counts per market, price cache stats |
-
-The dashboard history dropdown (`📅 ดูย้อนหลัง`) is populated from `/api/runs` and lets the user switch between any past run instantly — no re-fetch needed.
-
-### Dashboard 7-Step Flow
-
-1. **Market Health** — Breadth score + Uptrend score side by side
-2. **Distribution Day Monitor** — IBD method risk level
-3. **Exposure Strategy** — How much capital to deploy
-4. **VCP Screener** — Sortable table of VCP candidates
-5. **Breakout Trade Plan** — Buy/Stop/Target/Shares for actionable setups
-6. **Correction Duration Context** — Historical median correction lengths by sector
-7. **Earnings Trade Analyzer** — Post-earnings momentum plays
-
-### Free APIs Only
-
-The dashboard uses no paid APIs. All scripts use yfinance (free) or public data:
-- `downtrend-duration-analyzer` was migrated from FMP → yfinance + Wikipedia S&P 500 list
-- `earnings-trade-analyzer` uses yfinance by default (FMP_API_KEY forced to empty in subprocess env)
-- `ibd-distribution-day-monitor` uses yfinance by default
-- `market-breadth-analyzer` uses a free GitHub CSV for breadth data
-- `uptrend-analyzer` uses a free GitHub CSV
-
-### Windows Encoding Fix
-
-All subprocesses are started with `PYTHONIOENCODING=utf-8` and `PYTHONUTF8=1` via `_SUBPROCESS_ENV` in `app.py` to prevent cp1252 UnicodeEncodeError from emoji/arrow characters printed to stdout on Windows.
