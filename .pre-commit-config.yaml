@@ -79,13 +79,13 @@ repos:
         pass_filenames: false
 
       - id: catalog-drift
-        name: README catalog drift check (regenerate from skills-index.yaml)
+        name: README + CLAUDE.md catalog drift check (regenerate from skills-index.yaml)
         entry: python3 scripts/generate_catalog_from_index.py --check
         language: system
         # Fire on any input that affects rendered output: index, generator,
-        # and the README files themselves (catches manual edits between
+        # and the target files themselves (catches manual edits between
         # sentinel markers).
-        files: '^(skills-index\.yaml|scripts/generate_catalog_from_index\.py|README\.md|README\.ja\.md)$'
+        files: '^(skills-index\.yaml|scripts/generate_catalog_from_index\.py|README\.md|README\.ja\.md|CLAUDE\.md)$'
         pass_filenames: false
 
       # Pre-push hook: run validator in --strict-workflows + --strict-metadata

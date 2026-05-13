@@ -193,9 +193,90 @@ def render_catalog_ja(skills: list[dict]) -> str:
     return buf.getvalue().rstrip("\n")
 
 
+def _find_integration(skill: dict, integration_id: str) -> dict | None:
+    """Return the integrations[] entry with id == integration_id, or None."""
+    for i in skill.get("integrations") or []:
+        if i.get("id") == integration_id:
+            return i
+    return None
+
+
+API_MATRIX_CELL_BY_REQUIREMENT = {
+    "required": "✅ Required",
+    "recommended": "🟡 Optional (Recommended)",
+    "optional": "🟡 Optional",
+    "not_required": "❌ Not used",
+    "unknown": "❓ Unknown",
+}
+
+
+def _api_matrix_cell(skill: dict, integration_id: str) -> str:
+    """Render the cell for one paid-API column (FMP/FINVIZ/Alpaca)."""
+    entry = _find_integration(skill, integration_id)
+    if entry is None:
+        return "❌ Not used"
+    req = entry.get("requirement", "unknown")
+    return API_MATRIX_CELL_BY_REQUIREMENT.get(req, f"❓ {req}")
+
+
+def _api_matrix_notes(skill: dict) -> str:
+    """Build the Notes column.
+
+    Prefer the strongest paid-API integration's `note`. Otherwise list non-paid
+    integration ids that explain the skill's data source (csv, image, web, etc.).
+    """
+    paid_ids = ("fmp", "finviz", "alpaca")
+    # Prefer the highest-priority paid integration with a note.
+    for iid in paid_ids:
+        entry = _find_integration(skill, iid)
+        if entry and entry.get("note"):
+            return _escape_table_cell(str(entry["note"]))
+    # Fallback: combine non-paid integration ids + notes.
+    parts = []
+    for i in skill.get("integrations") or []:
+        if i.get("id") in paid_ids:
+            continue
+        note = i.get("note") or ""
+        if note:
+            parts.append(_escape_table_cell(str(note)))
+    if parts:
+        return "; ".join(parts)
+    return "—"
+
+
+def render_api_matrix(skills: list[dict]) -> str:
+    """Render the CLAUDE.md API Requirements by Skill table.
+
+    Preserves the historical 3-column shape (FMP / FINVIZ / Alpaca + Notes) so
+    existing setup instructions still apply. Skills are sorted by display_name.
+    """
+    buf = io.StringIO()
+    buf.write(
+        "<!-- This table is auto-generated from skills-index.yaml by "
+        "scripts/generate_catalog_from_index.py. Do not edit by hand — "
+        "edit the index and re-run the generator. -->\n\n"
+    )
+    buf.write("| Skill | FMP API | FINVIZ Elite | Alpaca | Notes |\n")
+    buf.write("|-------|---------|--------------|--------|-------|\n")
+    for s in sorted(skills, key=lambda x: x.get("display_name", x.get("id", ""))):
+        # Skip deprecated skills from the user-facing API matrix.
+        if s.get("status") == "deprecated":
+            continue
+        display_name = _escape_table_cell(s.get("display_name", s.get("id", "")))
+        fmp_cell = _api_matrix_cell(s, "fmp")
+        finviz_cell = _api_matrix_cell(s, "finviz")
+        alpaca_cell = _api_matrix_cell(s, "alpaca")
+        notes = _api_matrix_notes(s)
+        buf.write(
+            f"| **{display_name}** | {fmp_cell} | {finviz_cell} | {alpaca_cell} | {notes} |\n"
+        )
+    return buf.getvalue().rstrip("\n")
+
+
 RENDERERS = {
     "catalog-en": render_catalog_en,
     "catalog-ja": render_catalog_ja,
+    "api-matrix": render_api_matrix,
 }
 
 
@@ -237,6 +318,7 @@ def rewrite_file(path: Path, skills: list[dict]) -> tuple[str, str]:
 TARGETS = [
     ("README.md", {"catalog-en"}),
     ("README.ja.md", {"catalog-ja"}),
+    ("CLAUDE.md", {"api-matrix"}),
 ]
 
 

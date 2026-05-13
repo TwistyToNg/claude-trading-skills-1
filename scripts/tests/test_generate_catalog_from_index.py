@@ -15,6 +15,7 @@ from generate_catalog_from_index import (  # noqa: E402
     SENTINEL_RE,
     SentinelError,
     main,
+    render_api_matrix,
     render_catalog_en,
     render_catalog_ja,
     rewrite_file,
@@ -80,6 +81,30 @@ PLACEHOLDER — will be regenerated.
 Some pre-existing content below that must remain untouched.
 """
     (project_root / name).write_text(body, encoding="utf-8")
+
+
+def write_claude_md(project_root: Path) -> None:
+    """Create a minimal CLAUDE.md with the api-matrix sentinel."""
+    body = """# CLAUDE.md
+
+Some setup text.
+
+#### API Requirements by Skill
+
+<!-- skills-index:start name="api-matrix" -->
+PLACEHOLDER — will be regenerated.
+<!-- skills-index:end name="api-matrix" -->
+
+More text below the matrix.
+"""
+    (project_root / "CLAUDE.md").write_text(body, encoding="utf-8")
+
+
+def write_all_targets(project_root: Path) -> None:
+    """Create README.md + README.ja.md + CLAUDE.md with their sentinels."""
+    write_readme(project_root, name="README.md", sentinel="catalog-en")
+    write_readme(project_root, name="README.ja.md", sentinel="catalog-ja")
+    write_claude_md(project_root)
 
 
 # ---------------------------------------------------------------------------
@@ -176,6 +201,146 @@ def test_render_is_deterministic_when_skill_order_varies() -> None:
 
 
 # ---------------------------------------------------------------------------
+# API matrix renderer
+# ---------------------------------------------------------------------------
+
+
+def test_render_api_matrix_includes_header_columns() -> None:
+    """API matrix must preserve the 3-column FMP/FINVIZ/Alpaca + Notes shape."""
+    skills = [make_skill("a-skill")]
+    out = render_api_matrix(skills)
+    assert "| Skill | FMP API | FINVIZ Elite | Alpaca | Notes |" in out
+
+
+def test_render_api_matrix_required_recommended_optional() -> None:
+    """Requirement values must map to the canonical cell strings."""
+    skills = [
+        make_skill(
+            "fmp-required",
+            integrations=[{"id": "fmp", "type": "market_data", "requirement": "required"}],
+        ),
+        make_skill(
+            "finviz-rec",
+            integrations=[{"id": "finviz", "type": "screener", "requirement": "recommended"}],
+        ),
+        make_skill(
+            "alpaca-opt",
+            integrations=[{"id": "alpaca", "type": "broker", "requirement": "optional"}],
+        ),
+    ]
+    out = render_api_matrix(skills)
+    assert "**Fmp Required**" in out  # display_name title-cased from id
+    # required maps to ✅ Required
+    fmp_row = [line for line in out.splitlines() if "Fmp Required" in line][0]
+    assert "✅ Required" in fmp_row
+    finviz_row = [line for line in out.splitlines() if "Finviz Rec" in line][0]
+    assert "🟡 Optional (Recommended)" in finviz_row
+    alpaca_row = [line for line in out.splitlines() if "Alpaca Opt" in line][0]
+    # alpaca optional → 🟡 Optional
+    assert "🟡 Optional" in alpaca_row
+    assert "🟡 Optional (Recommended)" not in alpaca_row
+
+
+def test_render_api_matrix_absent_integration_renders_not_used() -> None:
+    """A skill without FMP/FINVIZ/Alpaca should show ❌ Not used."""
+    skills = [
+        make_skill(
+            "no-paid",
+            integrations=[
+                {
+                    "id": "local_calculation",
+                    "type": "calculation",
+                    "requirement": "not_required",
+                }
+            ],
+        )
+    ]
+    out = render_api_matrix(skills)
+    row = [line for line in out.splitlines() if "No Paid" in line][0]
+    # All three paid columns should be ❌ Not used
+    assert row.count("❌ Not used") == 3
+
+
+def test_render_api_matrix_excludes_deprecated_skills() -> None:
+    """Deprecated skills must not appear in the user-facing matrix."""
+    skills = [
+        make_skill("active-skill"),
+        make_skill("dead-skill", status="deprecated"),
+    ]
+    out = render_api_matrix(skills)
+    assert "Active Skill" in out
+    assert "Dead Skill" not in out
+
+
+def test_render_api_matrix_notes_uses_integration_note() -> None:
+    skills = [
+        make_skill(
+            "skill-with-note",
+            integrations=[
+                {
+                    "id": "fmp",
+                    "type": "market_data",
+                    "requirement": "required",
+                    "note": "Specific FMP usage description.",
+                }
+            ],
+        )
+    ]
+    out = render_api_matrix(skills)
+    assert "Specific FMP usage description." in out
+
+
+def test_render_api_matrix_notes_falls_back_to_other_integrations() -> None:
+    """When no paid integration has a note, Notes should describe non-paid ones."""
+    skills = [
+        make_skill(
+            "csv-skill",
+            integrations=[
+                {
+                    "id": "public_csv",
+                    "type": "local_file",
+                    "requirement": "required",
+                    "note": "Public CSV breadth data.",
+                }
+            ],
+        )
+    ]
+    out = render_api_matrix(skills)
+    assert "Public CSV breadth data." in out
+
+
+def test_render_api_matrix_escapes_pipe_in_notes() -> None:
+    skills = [
+        make_skill(
+            "pipe-note",
+            integrations=[
+                {
+                    "id": "fmp",
+                    "type": "market_data",
+                    "requirement": "required",
+                    "note": "Use a|b notation",
+                }
+            ],
+        )
+    ]
+    out = render_api_matrix(skills)
+    assert "a\\|b" in out
+    # The bare form must not appear (would break the table)
+    assert "a|b" not in out.replace("a\\|b", "")
+
+
+def test_render_api_matrix_sorted_by_display_name() -> None:
+    skills = [
+        make_skill("zebra-skill"),  # display_name "Zebra Skill"
+        make_skill("alpha-skill"),  # display_name "Alpha Skill"
+    ]
+    out = render_api_matrix(skills)
+    pos_alpha = out.find("Alpha Skill")
+    pos_zebra = out.find("Zebra Skill")
+    assert 0 < pos_alpha < pos_zebra
+
+
+# ---------------------------------------------------------------------------
 # rewrite_file — sentinel-region preservation
 # ---------------------------------------------------------------------------
 
@@ -238,8 +403,7 @@ def test_sentinel_regex_requires_matching_names() -> None:
 
 def test_main_writes_then_check_passes(tmp_path: Path) -> None:
     write_minimal_index(tmp_path, [make_skill("a-skill", category="market-regime")])
-    write_readme(tmp_path, name="README.md", sentinel="catalog-en")
-    write_readme(tmp_path, name="README.ja.md", sentinel="catalog-ja")
+    write_all_targets(tmp_path)
 
     rc = main(["--project-root", str(tmp_path)])
     assert rc == 0
@@ -250,8 +414,7 @@ def test_main_writes_then_check_passes(tmp_path: Path) -> None:
 
 def test_main_check_fails_on_drift(tmp_path: Path) -> None:
     write_minimal_index(tmp_path, [make_skill("a-skill", category="market-regime")])
-    write_readme(tmp_path, name="README.md", sentinel="catalog-en")
-    write_readme(tmp_path, name="README.ja.md", sentinel="catalog-ja")
+    write_all_targets(tmp_path)
 
     # Generate first
     main(["--project-root", str(tmp_path)])
@@ -272,14 +435,14 @@ def test_main_fails_on_missing_sentinel(tmp_path: Path) -> None:
     # README.md has WRONG sentinel name (catalog-ja in the english file).
     write_readme(tmp_path, name="README.md", sentinel="catalog-ja")
     write_readme(tmp_path, name="README.ja.md", sentinel="catalog-ja")
+    write_claude_md(tmp_path)  # CLAUDE.md is required; create it correctly
 
     rc = main(["--project-root", str(tmp_path)])
     assert rc == 1
 
 
 def test_main_fails_on_missing_index(tmp_path: Path) -> None:
-    write_readme(tmp_path, name="README.md", sentinel="catalog-en")
-    write_readme(tmp_path, name="README.ja.md", sentinel="catalog-ja")
+    write_all_targets(tmp_path)
 
     with pytest.raises(FileNotFoundError):
         main(["--project-root", str(tmp_path)])
