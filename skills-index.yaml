@@ -21,8 +21,12 @@ skills:
     type: local_file
     requirement: required
     note: User provides strategy parameters
-  inputs: []
-  outputs: []
+  inputs:
+  - strategy_parameters
+  - historical_ohlcv
+  outputs:
+  - backtest_report
+  - performance_metrics
   workflows:
   - trade-memory-loop
   - monthly-performance-review
@@ -40,8 +44,10 @@ skills:
     type: image
     requirement: required
     note: Chart screenshot input
-  inputs: []
-  outputs: []
+  inputs:
+  - breadth_chart_image
+  outputs:
+  - breadth_assessment_report
   workflows: []
   hand_written_doc: false
 - id: breakout-trade-planner
@@ -58,8 +64,12 @@ skills:
     type: calculation
     requirement: not_required
     note: Consumes VCP screener output; pure calculation + Alpaca order templates
-  inputs: []
-  outputs: []
+  inputs:
+  - vcp_candidates
+  - account_size
+  outputs:
+  - entry_plan
+  - alpaca_order_template
   workflows:
   - swing-opportunity-daily
   hand_written_doc: false
@@ -75,8 +85,12 @@ skills:
     type: market_data
     requirement: required
     note: US stock fundamentals via FMP
-  inputs: []
-  outputs: []
+  inputs:
+  - screener_universe
+  - fundamentals_data
+  outputs:
+  - canslim_candidates
+  - composite_scores
   workflows:
   - swing-opportunity-daily
   hand_written_doc: false
@@ -92,8 +106,11 @@ skills:
     type: calculation
     requirement: not_required
     note: Local markdown validation; works offline
-  inputs: []
-  outputs: []
+  inputs:
+  - markdown_document
+  outputs:
+  - quality_report
+  - issue_list
   workflows: []
   hand_written_doc: false
 - id: dividend-growth-pullback-screener
@@ -113,8 +130,12 @@ skills:
     type: screener
     requirement: recommended
     note: FINVIZ Elite API
-  inputs: []
-  outputs: []
+  inputs:
+  - dividend_universe
+  - rsi_thresholds
+  outputs:
+  - pullback_candidates
+  - yield_growth_metrics
   workflows: []
   hand_written_doc: false
 - id: downtrend-duration-analyzer
@@ -130,8 +151,11 @@ skills:
     type: calculation
     requirement: not_required
     note: Duration analysis from market data; pure calculation
-  inputs: []
-  outputs: []
+  inputs:
+  - historical_correction_data
+  outputs:
+  - duration_histogram_html
+  - sector_breakdown
   workflows: []
   hand_written_doc: false
 - id: dual-axis-skill-reviewer
@@ -147,8 +171,10 @@ skills:
     type: calculation
     requirement: not_required
     note: Deterministic scoring + optional LLM review
-  inputs: []
-  outputs: []
+  inputs:
+  - skill_source_tree
+  outputs:
+  - dual_axis_score_report
   workflows:
   - monthly-performance-review
   hand_written_doc: false
@@ -165,8 +191,11 @@ skills:
     type: market_data
     requirement: required
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - date_range
+  - market_cap_filter
+  outputs:
+  - earnings_calendar_report
   workflows: []
   hand_written_doc: false
 - id: earnings-trade-analyzer
@@ -182,8 +211,11 @@ skills:
     type: market_data
     requirement: required
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - recent_earnings_universe
+  outputs:
+  - scored_candidates
+  - five_factor_grades
   workflows: []
   hand_written_doc: false
 - id: economic-calendar-fetcher
@@ -198,8 +230,10 @@ skills:
     type: market_data
     requirement: required
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - date_range
+  outputs:
+  - economic_events_report
   workflows: []
   hand_written_doc: false
 - id: edge-candidate-agent
@@ -215,8 +249,12 @@ skills:
     type: market_data
     requirement: optional
     note: Optional OHLCV via FMP for edge ticket export
-  inputs: []
-  outputs: []
+  inputs:
+  - eod_observations
+  outputs:
+  - market_summary_json
+  - anomalies_json
+  - tickets_dir
   workflows: []
   hand_written_doc: false
 - id: edge-concept-synthesizer
@@ -232,8 +270,11 @@ skills:
     type: calculation
     requirement: not_required
     note: Synthesizes detector tickets and hints into edge concepts
-  inputs: []
-  outputs: []
+  inputs:
+  - tickets_dir
+  - hints_yaml
+  outputs:
+  - edge_concepts_yaml
   workflows: []
   hand_written_doc: false
 - id: edge-hint-extractor
@@ -249,8 +290,11 @@ skills:
     type: calculation
     requirement: not_required
     note: Extracts hints from observations/news; pure calculation
-  inputs: []
-  outputs: []
+  inputs:
+  - market_summary_json
+  - anomalies_json
+  outputs:
+  - hints_yaml
   workflows: []
   hand_written_doc: false
 - id: edge-pipeline-orchestrator
@@ -266,8 +310,13 @@ skills:
     type: calculation
     requirement: not_required
     note: Orchestrates edge pipeline subskills via subprocess
-  inputs: []
-  outputs: []
+  inputs:
+  - tickets_dir
+  - market_summary
+  - anomalies
+  outputs:
+  - pipeline_report
+  - exported_strategies
   workflows: []
   hand_written_doc: false
 - id: edge-signal-aggregator
@@ -284,8 +333,12 @@ skills:
     type: calculation
     requirement: not_required
     note: Aggregates signals from edge-finding skills
-  inputs: []
-  outputs: []
+  inputs:
+  - edge_candidate_outputs
+  - theme_outputs
+  - sector_outputs
+  outputs:
+  - conviction_dashboard
   workflows: []
   hand_written_doc: false
 - id: edge-strategy-designer
@@ -301,8 +354,10 @@ skills:
     type: calculation
     requirement: not_required
     note: Converts edge concepts into strategy drafts
-  inputs: []
-  outputs: []
+  inputs:
+  - edge_concepts_yaml
+  outputs:
+  - strategy_drafts_yaml
   workflows: []
   hand_written_doc: false
 - id: edge-strategy-reviewer
@@ -318,8 +373,11 @@ skills:
     type: calculation
     requirement: not_required
     note: Deterministic scoring on local YAML drafts
-  inputs: []
-  outputs: []
+  inputs:
+  - strategy_drafts_yaml
+  outputs:
+  - review_yaml
+  - verdict_list
   workflows: []
   hand_written_doc: false
 - id: exposure-coach
@@ -336,8 +394,12 @@ skills:
     type: calculation
     requirement: not_required
     note: Synthesizes signals from other skills; pure calculation
-  inputs: []
-  outputs: []
+  inputs:
+  - market_breadth_report
+  - uptrend_report
+  - top_risk_report
+  outputs:
+  - exposure_decision
   workflows:
   - market-regime-daily
   hand_written_doc: false
@@ -353,8 +415,11 @@ skills:
     type: screener
     requirement: optional
     note: FINVIZ Elite API
-  inputs: []
-  outputs: []
+  inputs:
+  - natural_language_query
+  outputs:
+  - finviz_url
+  - filter_codes
   workflows: []
   hand_written_doc: false
 - id: ftd-detector
@@ -370,8 +435,11 @@ skills:
     type: market_data
     requirement: required
     note: Daily QQQ/SPY OHLCV via FMP
-  inputs: []
-  outputs: []
+  inputs:
+  - sp500_ohlcv
+  - nasdaq_ohlcv
+  outputs:
+  - ftd_signal_report
   workflows: []
   hand_written_doc: false
 - id: ibd-distribution-day-monitor
@@ -388,8 +456,11 @@ skills:
     type: market_data
     requirement: required
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - qqq_ohlcv
+  - spy_ohlcv
+  outputs:
+  - distribution_day_count_report
   workflows: []
   hand_written_doc: false
 - id: institutional-flow-tracker
@@ -405,8 +476,11 @@ skills:
     type: market_data
     requirement: required
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - 13f_filings
+  - fund_universe
+  outputs:
+  - flow_analysis_report
   workflows: []
   hand_written_doc: false
 - id: kanchi-dividend-review-monitor
@@ -422,8 +496,11 @@ skills:
     type: market_data
     requirement: recommended
     note: Dividend / price monitoring via FMP
-  inputs: []
-  outputs: []
+  inputs:
+  - holdings_snapshot
+  outputs:
+  - t1_t5_anomaly_findings
+  - review_queue
   workflows:
   - core-portfolio-weekly
   hand_written_doc: false
@@ -439,8 +516,12 @@ skills:
     type: market_data
     requirement: recommended
     note: US dividend stock data via FMP
-  inputs: []
-  outputs: []
+  inputs:
+  - screener_universe
+  - sector_filter
+  outputs:
+  - kanchi_candidates
+  - stock_memo
   workflows: []
   hand_written_doc: false
 - id: kanchi-dividend-us-tax-accounting
@@ -455,8 +536,12 @@ skills:
     type: calculation
     requirement: not_required
     note: US tax workflow guidance; pure calculation
-  inputs: []
-  outputs: []
+  inputs:
+  - dividend_distributions
+  - 1099_div
+  outputs:
+  - qualified_ordinary_classification
+  - account_location_advice
   workflows:
   - core-portfolio-weekly
   hand_written_doc: false
@@ -472,8 +557,11 @@ skills:
     type: market_data
     requirement: recommended
     note: Cross-asset ratio data via yfinance or local CSV
-  inputs: []
-  outputs: []
+  inputs:
+  - cross_asset_ratios
+  - yield_curve_data
+  outputs:
+  - regime_transition_report
   workflows:
   - market-regime-daily
   hand_written_doc: false
@@ -489,8 +577,11 @@ skills:
     type: local_file
     requirement: required
     note: TraderMonty public CSV; no API key required
-  inputs: []
-  outputs: []
+  inputs:
+  - public_breadth_csv
+  outputs:
+  - breadth_composite_score
+  - component_breakdown
   workflows:
   - market-regime-daily
   hand_written_doc: false
@@ -510,8 +601,11 @@ skills:
     type: image
     requirement: optional
     note: Optional chart image inputs for technical interpretation
-  inputs: []
-  outputs: []
+  inputs:
+  - global_market_data
+  - chart_image
+  outputs:
+  - market_environment_report
   workflows: []
   hand_written_doc: false
 - id: market-news-analyst
@@ -527,8 +621,11 @@ skills:
     type: web
     requirement: required
     note: Web search / fetch
-  inputs: []
-  outputs: []
+  inputs:
+  - news_search_query
+  - date_range
+  outputs:
+  - news_impact_report
   workflows: []
   hand_written_doc: false
 - id: market-top-detector
@@ -544,8 +641,10 @@ skills:
     type: local_file
     requirement: required
     note: Public market data CSVs; no API key required
-  inputs: []
-  outputs: []
+  inputs:
+  - public_market_data_csv
+  outputs:
+  - market_top_composite_score
   workflows:
   - market-regime-daily
   hand_written_doc: false
@@ -561,8 +660,14 @@ skills:
     type: market_data
     requirement: optional
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - ticker
+  - strategy_type
+  - stock_data
+  outputs:
+  - greeks
+  - pnl_simulation
+  - strategy_comparison
   workflows: []
   hand_written_doc: false
 - id: pair-trade-screener
@@ -577,8 +682,12 @@ skills:
     type: market_data
     requirement: required
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - sector_universe
+  - lookback_period
+  outputs:
+  - cointegrated_pairs
+  - zscore_signals
   workflows: []
   hand_written_doc: false
 - id: parabolic-short-trade-planner
@@ -598,8 +707,12 @@ skills:
     type: broker
     requirement: optional
     note: Alpaca brokerage MCP/API
-  inputs: []
-  outputs: []
+  inputs:
+  - screener_universe
+  - alpaca_inventory
+  outputs:
+  - pre_market_plan
+  - intraday_trigger_state
   workflows: []
   hand_written_doc: false
 - id: pead-screener
@@ -614,8 +727,12 @@ skills:
     type: market_data
     requirement: required
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - earnings_candidates
+  - weekly_ohlcv
+  outputs:
+  - pead_signal_list
+  - breakout_triggers
   workflows: []
   hand_written_doc: false
 - id: portfolio-manager
@@ -632,8 +749,11 @@ skills:
     type: broker
     requirement: required
     note: Alpaca brokerage MCP/API
-  inputs: []
-  outputs: []
+  inputs:
+  - alpaca_holdings_or_csv
+  outputs:
+  - allocation_report
+  - rebalance_actions
   workflows:
   - core-portfolio-weekly
   hand_written_doc: false
@@ -649,8 +769,13 @@ skills:
     type: calculation
     requirement: not_required
     note: Pure calculation; works offline
-  inputs: []
-  outputs: []
+  inputs:
+  - entry_price
+  - stop_price
+  - account_size
+  outputs:
+  - share_count
+  - risk_amount
   workflows:
   - swing-opportunity-daily
   hand_written_doc: false
@@ -667,8 +792,12 @@ skills:
     type: web
     requirement: required
     note: Headline / news search via WebSearch
-  inputs: []
-  outputs: []
+  inputs:
+  - news_headline
+  outputs:
+  - scenario_report_ja
+  - stock_picks
+  - review_yaml
   workflows: []
   hand_written_doc: false
 - id: sector-analyst
@@ -683,8 +812,11 @@ skills:
     type: image
     requirement: required
     note: Chart screenshot input
-  inputs: []
-  outputs: []
+  inputs:
+  - sector_uptrend_csv
+  - chart_image
+  outputs:
+  - rotation_assessment_report
   workflows: []
   hand_written_doc: false
 - id: signal-postmortem
@@ -699,8 +831,10 @@ skills:
     type: calculation
     requirement: not_required
     note: Postmortem framework; pure calculation
-  inputs: []
-  outputs: []
+  inputs:
+  - closed_thesis_record
+  outputs:
+  - postmortem_findings
   workflows:
   - trade-memory-loop
   - monthly-performance-review
@@ -717,8 +851,10 @@ skills:
     type: calculation
     requirement: not_required
     note: Generates skill scaffolding from idea specs
-  inputs: []
-  outputs: []
+  inputs:
+  - idea_specification
+  outputs:
+  - skill_scaffolding
   workflows: []
   hand_written_doc: false
 - id: skill-idea-miner
@@ -733,8 +869,10 @@ skills:
     type: calculation
     requirement: not_required
     note: Mines session logs for skill ideas
-  inputs: []
-  outputs: []
+  inputs:
+  - session_logs
+  outputs:
+  - skill_idea_backlog_yaml
   workflows: []
   hand_written_doc: false
 - id: skill-integration-tester
@@ -750,8 +888,11 @@ skills:
     type: calculation
     requirement: not_required
     note: Validates multi-skill workflow contracts
-  inputs: []
-  outputs: []
+  inputs:
+  - claude_md
+  - skill_outputs
+  outputs:
+  - workflow_validation_report
   workflows: []
   hand_written_doc: false
 - id: stanley-druckenmiller-investment
@@ -768,8 +909,11 @@ skills:
     type: calculation
     requirement: not_required
     note: Synthesizes outputs from upstream skills; pure calculation
-  inputs: []
-  outputs: []
+  inputs:
+  - upstream_skill_outputs
+  - exposure_decision
+  outputs:
+  - druckenmiller_synthesis_report
   workflows: []
   hand_written_doc: false
 - id: strategy-pivot-designer
@@ -785,8 +929,10 @@ skills:
     type: calculation
     requirement: not_required
     note: Pivot proposal generator; pure calculation
-  inputs: []
-  outputs: []
+  inputs:
+  - backtest_iteration_history
+  outputs:
+  - pivot_proposals
   workflows: []
   hand_written_doc: false
 - id: technical-analyst
@@ -802,8 +948,10 @@ skills:
     type: image
     requirement: required
     note: Chart screenshot input
-  inputs: []
-  outputs: []
+  inputs:
+  - weekly_chart_image
+  outputs:
+  - technical_assessment_report
   workflows:
   - swing-opportunity-daily
   hand_written_doc: false
@@ -823,8 +971,12 @@ skills:
     type: screener
     requirement: recommended
     note: FINVIZ Elite API
-  inputs: []
-  outputs: []
+  inputs:
+  - theme_universe
+  - sector_data
+  outputs:
+  - theme_heat_scores
+  - trending_themes
   workflows:
   - swing-opportunity-daily
   hand_written_doc: false
@@ -841,8 +993,12 @@ skills:
     type: calculation
     requirement: not_required
     note: Hypothesis generation from journal/data inputs; pure calculation
-  inputs: []
-  outputs: []
+  inputs:
+  - market_data_bundle
+  - journal_snippets
+  outputs:
+  - hypothesis_cards
+  - strategy_yaml
   workflows: []
   hand_written_doc: false
 - id: trader-memory-core
@@ -858,8 +1014,12 @@ skills:
     type: market_data
     requirement: optional
     note: Financial Modeling Prep API
-  inputs: []
-  outputs: []
+  inputs:
+  - screener_report
+  - trade_actions
+  outputs:
+  - thesis_record
+  - journal_entry
   workflows:
   - core-portfolio-weekly
   - swing-opportunity-daily
@@ -879,8 +1039,10 @@ skills:
     type: local_file
     requirement: required
     note: Monty Uptrend Ratio Dashboard CSV; no API key required
-  inputs: []
-  outputs: []
+  inputs:
+  - uptrend_ratio_csv
+  outputs:
+  - uptrend_composite_score
   workflows:
   - market-regime-daily
   hand_written_doc: false
@@ -897,8 +1059,10 @@ skills:
     type: local_file
     requirement: required
     note: User provides indicators
-  inputs: []
-  outputs: []
+  inputs:
+  - bubble_indicators_data
+  outputs:
+  - bubble_risk_score
   workflows: []
   hand_written_doc: false
 - id: us-stock-analysis
@@ -915,8 +1079,12 @@ skills:
     type: local_file
     requirement: required
     note: User provides data
-  inputs: []
-  outputs: []
+  inputs:
+  - ticker
+  - fundamentals_data
+  - chart_image
+  outputs:
+  - stock_analysis_report
   workflows: []
   hand_written_doc: false
 - id: value-dividend-screener
@@ -937,8 +1105,11 @@ skills:
     type: screener
     requirement: recommended
     note: FINVIZ Elite API
-  inputs: []
-  outputs: []
+  inputs:
+  - dividend_universe
+  - value_filters
+  outputs:
+  - high_yield_candidates
   workflows:
   - core-portfolio-weekly
   hand_written_doc: false
@@ -954,8 +1125,11 @@ skills:
     type: market_data
     requirement: required
     note: S&P 500 OHLCV via FMP
-  inputs: []
-  outputs: []
+  inputs:
+  - sp500_ohlcv
+  outputs:
+  - vcp_candidates
+  - pivot_points
   workflows:
   - swing-opportunity-daily
   hand_written_doc: false

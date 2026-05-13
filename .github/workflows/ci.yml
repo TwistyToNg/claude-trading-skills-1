@@ -224,6 +224,13 @@ jobs:
       - name: Validate skills-index (--strict-workflows)
         run: python3 scripts/validate_skills_index.py --strict-workflows
 
+      # 2b. Strict metadata validation — every skill has populated
+      # timeframe / difficulty / inputs / outputs (no `unknown` markers,
+      # no empty lists). Now safe to enforce because the corresponding
+      # fill-in PR populated these fields for all 54 skills.
+      - name: Validate skills-index (--strict-metadata)
+        run: python3 scripts/validate_skills_index.py --strict-metadata
+
       # 3. Drift check: docs/{en,ja}/workflows.md must match what the
       # generator would produce from workflows/*.yaml. Catches manual edits
       # to the docs and stale docs after manifest changes.
