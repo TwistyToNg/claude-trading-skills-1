@@ -31,6 +31,11 @@ from calculators.market_calculator import calculate_market_direction
 from calculators.new_highs_calculator import calculate_newness
 from calculators.supply_demand_calculator import calculate_supply_demand
 from fmp_client import FMPClient
+try:
+    from yf_client import YFClient
+    _YF_AVAILABLE = True
+except ImportError:
+    _YF_AVAILABLE = False
 from report_generator import generate_json_report, generate_markdown_report
 from scorer import (
     calculate_composite_score_phase3,
@@ -284,14 +289,25 @@ def analyze_stock(
                 }
             )
 
-        # I Component: Institutional Sponsorship (with Finviz fallback)
-        institutional_holders = client.get_institutional_holders(symbol)
+        # I Component: Institutional Sponsorship
+        # YFClient returns a different shape — normalise before passing to calculator
+        if hasattr(client, "get_institutional_ownership"):
+            inst_data = client.get_institutional_ownership(symbol)
+            if inst_data:
+                # Wrap into the FMP-style shape the calculator expects
+                institutional_holders = inst_data.get("institutionalHolders", [])
+                # Patch profile with pct_institutions so calculator can use it
+                profile[0]["institutionPercent"] = inst_data.get("percentInstitutions", 0)
+            else:
+                institutional_holders = None
+        else:
+            institutional_holders = client.get_institutional_holders(symbol)
         i_result = (
             calculate_institutional_sponsorship(
-                institutional_holders, profile[0], symbol=symbol, use_finviz_fallback=True
+                institutional_holders, profile[0], symbol=symbol, use_finviz_fallback=False
             )
-            if institutional_holders
-            else {"score": 0, "error": "No institutional holder data"}
+            if institutional_holders is not None
+            else {"score": 50, "error": "No institutional holder data — neutral score"}
         )
 
         # M Component: Market Direction (use pre-calculated)
@@ -360,18 +376,38 @@ def main():
     print("=" * 60)
     print()
 
-    # Initialize FMP client
-    try:
-        client = FMPClient(api_key=args.api_key)
-        print("✓ FMP API client initialized")
-    except ValueError as e:
-        print(f"ERROR: {e}", file=sys.stderr)
-        sys.exit(1)
+    # Initialize client — use YFClient when FMP key is absent
+    api_key = args.api_key or os.environ.get("FMP_API_KEY", "")
+    use_yfinance = not api_key and _YF_AVAILABLE
+
+    if use_yfinance:
+        client = YFClient()
+        print("✓ Yahoo Finance client (free, no API key required)")
+    else:
+        try:
+            client = FMPClient(api_key=args.api_key)
+            print("✓ FMP API client initialized")
+        except ValueError as e:
+            if _YF_AVAILABLE:
+                print(f"⚠️  FMP unavailable ({e}), falling back to Yahoo Finance", file=sys.stderr)
+                client = YFClient()
+                use_yfinance = True
+            else:
+                print(f"ERROR: {e}", file=sys.stderr)
+                sys.exit(1)
 
     # Determine universe
     if args.universe:
         universe = args.universe[: args.max_candidates]
         print(f"✓ Custom universe: {len(universe)} stocks")
+    elif use_yfinance and hasattr(client, "get_sp500_constituents"):
+        sp500 = client.get_sp500_constituents()
+        if sp500:
+            universe = [s["symbol"] for s in sp500][: args.max_candidates]
+            print(f"✓ S&P 500 universe (Wikipedia): {len(universe)} stocks")
+        else:
+            universe = DEFAULT_UNIVERSE[: args.max_candidates]
+            print(f"⚠️  S&P 500 fetch failed, using default {len(universe)} stocks")
     else:
         universe = DEFAULT_UNIVERSE[: args.max_candidates]
         print(f"✓ Default universe (S&P 500 top {len(universe)}): {len(universe)} stocks")

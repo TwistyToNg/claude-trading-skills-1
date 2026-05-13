@@ -20,8 +20,8 @@ Analyze historical price data to identify downtrend periods (peak-to-trough) and
 ## Prerequisites
 
 - Python 3.9+
-- FMP API key (set `FMP_API_KEY` environment variable or use `--api-key`)
-- Required packages: `requests`, `pandas`, `numpy` (standard data analysis stack)
+- No API key required — uses yfinance (free) for price data and Wikipedia for S&P 500 constituents
+- Required packages: `yfinance`, `requests`, `pandas`, `numpy`
 
 ## Workflow
 
@@ -31,8 +31,7 @@ Run the analysis script to fetch OHLC data for a universe of stocks and identify
 
 ```bash
 python3 skills/downtrend-duration-analyzer/scripts/analyze_downtrends.py \
-  --sector "Technology" \
-  --lookback-years 5 \
+  --max-stocks 100 \
   --output-dir reports/
 ```
 

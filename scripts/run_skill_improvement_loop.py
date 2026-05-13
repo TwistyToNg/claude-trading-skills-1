@@ -18,6 +18,12 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# Add scripts directory to sys.path to import gemini_adapter
+scripts_dir = Path(__file__).parent
+if str(scripts_dir) not in sys.path:
+    sys.path.append(str(scripts_dir))
+import gemini_adapter
+
 logger = logging.getLogger("skill_improvement")
 
 REVIEWER_SCRIPT = "skills/dual-axis-skill-reviewer/scripts/run_dual_axis_review.py"
@@ -29,10 +35,7 @@ SUMMARY_DIR = "reports/skill-improvement-log"
 SCORE_THRESHOLD = 90
 HISTORY_LIMIT = 60
 LOG_RETENTION_DAYS = 30
-CLAUDE_TIMEOUT = 300
-CLAUDE_RETRIES = 2
-CLAUDE_BUDGET_REVIEW = 0.50
-CLAUDE_BUDGET_IMPROVE = 2.00
+GEMINI_TIMEOUT = 300       # renamed from CLAUDE_TIMEOUT
 IMPROVEMENT_TIMEOUT = 600
 
 
@@ -251,11 +254,7 @@ def run_auto_score(
 
 
 def run_llm_review(project_root: Path, skill_name: str, prompt_file: str) -> dict | None:
-    """Invoke claude CLI for LLM review. Returns parsed JSON or None."""
-    if not shutil.which("claude"):
-        logger.warning("claude CLI not found; skipping LLM review.")
-        return None
-
+    """Invoke Gemini for LLM review. Returns parsed JSON or None."""
     prompt_path = Path(prompt_file)
     if not prompt_path.is_absolute():
         prompt_path = project_root / prompt_path
@@ -264,105 +263,18 @@ def run_llm_review(project_root: Path, skill_name: str, prompt_file: str) -> dic
         return None
 
     prompt_text = prompt_path.read_text(encoding="utf-8")
-
-    # JSON Schema to force structured output from Claude CLI
-    review_schema = json.dumps(
-        {
-            "type": "object",
-            "properties": {
-                "score": {"type": "integer", "minimum": 0, "maximum": 100},
-                "summary": {"type": "string"},
-                "findings": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "severity": {"type": "string", "enum": ["high", "medium", "low"]},
-                            "path": {"type": "string"},
-                            "line": {"type": "integer"},
-                            "message": {"type": "string"},
-                            "improvement": {"type": "string"},
-                        },
-                        "required": ["severity", "message", "improvement"],
-                    },
-                },
-            },
-            "required": ["score", "summary", "findings"],
-        }
+    
+    # JSON Schema instructions are already part of the prompt in some skills,
+    # but we force JSON mode in gemini_adapter.
+    response_text = gemini_adapter.call_gemini(
+        prompt_text,
+        model_name="gemini-3-flash-preview",
+        response_mime_type="application/json"
     )
-
-    # Try with --json-schema first, then fall back to plain --output-format json
-    strategies = [
-        {
-            "label": "json-schema",
-            "extra_args": ["--json-schema", review_schema],
-        },
-        {
-            "label": "plain-json",
-            "extra_args": [],
-        },
-    ]
-
-    for strategy in strategies:
-        for attempt in range(CLAUDE_RETRIES + 1):
-            try:
-                cmd = [
-                    "claude",
-                    "-p",
-                    "--output-format",
-                    "json",
-                    *strategy["extra_args"],
-                    "--max-turns",
-                    "1",
-                    f"--max-budget-usd={CLAUDE_BUDGET_REVIEW}",
-                ]
-                # For plain-json mode, append schema instructions to the prompt
-                effective_prompt = prompt_text
-                if strategy["label"] == "plain-json":
-                    effective_prompt += (
-                        "\n\nIMPORTANT: Respond with a single JSON object containing these keys: "
-                        '"score" (integer 0-100), "summary" (string), '
-                        '"findings" (array of objects with "severity", "message", "improvement"). '
-                        "Do not wrap in markdown code fences."
-                    )
-                result = subprocess.run(
-                    cmd,
-                    input=effective_prompt,
-                    cwd=project_root,
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    timeout=CLAUDE_TIMEOUT,
-                )
-                if result.returncode != 0:
-                    logger.warning(
-                        "claude -p [%s] attempt %d failed: %s",
-                        strategy["label"],
-                        attempt + 1,
-                        result.stderr.strip()[:200],
-                    )
-                    continue
-
-                # Parse claude output to extract the review JSON
-                response = _extract_json_from_claude(result.stdout, ["score"])
-                if response:
-                    return response
-                logger.warning(
-                    "Could not parse LLM JSON [%s] on attempt %d.",
-                    strategy["label"],
-                    attempt + 1,
-                )
-
-            except subprocess.TimeoutExpired:
-                logger.warning(
-                    "claude -p [%s] timed out on attempt %d.", strategy["label"], attempt + 1
-                )
-            except FileNotFoundError:
-                logger.warning("claude CLI disappeared; skipping LLM review.")
-                return None
-
-        logger.info("Strategy '%s' exhausted; trying next.", strategy["label"])
-
+    
+    if response_text:
+        return gemini_adapter.extract_json_from_text(response_text)
+        
     return None
 
 
@@ -508,23 +420,9 @@ def apply_improvement(
             + "\n\nMake minimal, targeted edits to address the findings. Do not change unrelated code."
         )
 
-        result = subprocess.run(
-            [
-                "claude",
-                "-p",
-                "--allowedTools",
-                "Read,Edit,Write,Glob,Grep",
-                f"--max-budget-usd={CLAUDE_BUDGET_IMPROVE}",
-            ],
-            input=prompt,
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=IMPROVEMENT_TIMEOUT,
-        )
-        if result.returncode != 0:
-            logger.error("claude improvement failed: %s", result.stderr.strip()[:200])
+        success = gemini_adapter.run_gemini_agent(prompt, model_name="gemini-1.5-flash")
+        if not success:
+            logger.error("Gemini improvement agent failed.")
             _rollback(project_root, skill_name, branch_name)
             return None
 

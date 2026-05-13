@@ -208,9 +208,9 @@ pre-commit install && pre-commit install --hook-type pre-push
 | **Value Dividend Screener** | ✅ Required | 🟡 Optional (Recommended) | ❌ Not used | FMP for analysis; FINVIZ reduces execution time by 70-80% |
 | **Dividend Growth Pullback Screener** | ✅ Required | 🟡 Optional (Recommended) | ❌ Not used | FMP for analysis; FINVIZ for RSI pre-screening |
 | **Pair Trade Screener** | ✅ Required | ❌ Not used | ❌ Not used | Statistical arbitrage analysis |
-| **Earnings Trade Analyzer** | ✅ Required | ❌ Not used | ❌ Not used | 5-factor earnings scoring; free tier sufficient |
+| **Earnings Trade Analyzer** | ❌ Not required | ❌ Not used | ❌ Not used | Uses yfinance by default; FMP optional via --api-key |
 | **PEAD Screener** | ✅ Required | ❌ Not used | ❌ Not used | Weekly candle PEAD analysis; free tier sufficient |
-| **IBD Distribution Day Monitor** | ✅ Required | ❌ Not used | ❌ Not used | Daily QQQ/SPY OHLCV; free tier sufficient (2 symbols × 1 call/day) |
+| **IBD Distribution Day Monitor** | ❌ Not required | ❌ Not used | ❌ Not used | Uses yfinance by default; FMP optional via --api-key |
 | **Options Strategy Advisor** | 🟡 Optional | ❌ Not used | ❌ Not used | FMP for stock data; Black-Scholes works without |
 | **Portfolio Manager** | ❌ Not used | ❌ Not used | ✅ Required | Real-time holdings via Alpaca MCP Server |
 | Sector Analyst | ❌ Not required | ❌ Not used | ❌ Not used | Image-based chart analysis |
@@ -299,6 +299,29 @@ All API scripts follow this pattern:
 4. Support both methods for CLI, Desktop, and Web environments
 5. Handle rate limits gracefully with retry logic
 
+### Local Market Data Cache
+
+Several skills share a SQLite cache at `state/market_cache.db` (project root). The cache is managed by `scripts/cache_manager.py` and is used by:
+
+- `skills/vcp-screener/scripts/yf_client.py`
+- `skills/ibd-distribution-day-monitor/scripts/yf_client.py`
+- `skills/earnings-trade-analyzer/scripts/yf_client.py`
+
+**Cache tables:**
+| Table | Content | TTL |
+|-------|---------|-----|
+| `price_bar` | OHLCV per (symbol, date) | 7-day full refresh; incremental otherwise |
+| `company_profile` | name / sector / mktCap / price | 7 days |
+| `earnings_scan` | per-symbol earnings found/not-found | 24 hours |
+| `universe` | S&P 500 symbol list | 30 days |
+
+**Incremental OHLCV logic (avoids re-downloading on every run):**
+- ≤1 day stale → served from cache, zero network calls
+- 2–7 days stale → only missing bars fetched (one small `yf.download()` batch)
+- >7 days stale or no data → full re-download (catches split/dividend adjustments)
+
+The `state/` directory is git-ignored. Delete `state/market_cache.db` to force a full re-download on next run.
+
 ### Running Helper Scripts
 
 **Economic Calendar Fetcher:** ⚠️ Requires FMP API key
@@ -369,16 +392,19 @@ python3 pair-trade-screener/scripts/find_pairs.py \
   --lookback-days 365
 ```
 
-**Earnings Trade Analyzer:** ⚠️ Requires FMP API key
+**Earnings Trade Analyzer:** No API key required (yfinance default); FMP optional
 ```bash
-# Default: 2-day lookback, top 20 results
+# Default: 2-day lookback, top 20 results (uses yfinance, no key needed)
 python3 skills/earnings-trade-analyzer/scripts/analyze_earnings_trades.py \
   --output-dir reports/
 
 # Custom parameters with entry quality filter
 python3 skills/earnings-trade-analyzer/scripts/analyze_earnings_trades.py \
-  --lookback-days 3 --top 10 --max-api-calls 200 \
-  --apply-entry-filter --output-dir reports/
+  --lookback-days 3 --top 10 --apply-entry-filter --output-dir reports/
+
+# With FMP API key for faster earnings calendar (optional)
+python3 skills/earnings-trade-analyzer/scripts/analyze_earnings_trades.py \
+  --api-key YOUR_FMP_KEY --output-dir reports/
 ```
 
 **PEAD Screener:** ⚠️ Requires FMP API key
@@ -859,3 +885,71 @@ ZIP packages allow Claude web app users to upload and use skills without cloning
 - Include setup instructions for both environment variables and command-line arguments
 - Provide links to API registration and pricing pages
 - Distinguish between required APIs (skill won't work without) and optional APIs (enhances performance)
+
+## Trading Intelligence Dashboard
+
+A local Flask web dashboard (`dashboard/app.py`) aggregates all skill outputs into a single decision-support UI. Start it with:
+
+```bash
+cd dashboard && python app.py
+# Opens at http://localhost:5050
+```
+
+### Architecture
+
+- **Backend**: `dashboard/app.py` — Flask app serving `/api/data`, `/api/run`, `/api/history/<symbol>`
+- **Frontend**: `dashboard/templates/dashboard.html` — Single-page app with 7-step trading workflow
+- **Data flow**: Scripts write JSON to `reports/` → `/api/data` reads latest files → JS renders them
+
+### `/api/data` Response Fields
+
+| Field | Source Script | Description |
+|-------|--------------|-------------|
+| `breadth` | `market-breadth-analyzer` | Composite 0-100 score, zone (Strong/Healthy/Neutral/Weakening/Critical) |
+| `uptrend` | `uptrend-analyzer` | Composite 0-100 score, zone (StrongBull/Bull/Neutral/Cautious/Bear), warnings |
+| `ibd` | `ibd-distribution-day-monitor` | Distribution day counts, portfolio action |
+| `exposure` | `exposure-coach` | Recommendation (REDUCE_ONLY/CAUTIOUS/BULLISH), ceiling % |
+| `vcp` | `vcp-screener` | VCP pattern candidates with quality grades |
+| `breakout_plan` | `breakout-trade-planner` | Buy price, stop loss, target, shares per candidate |
+| `downtrend` | `downtrend-duration-analyzer` | Historical correction duration stats by sector/market cap |
+| `earnings_trade` | `earnings-trade-analyzer` | Post-earnings momentum candidates with A-D grades |
+
+### `/api/run` Parameters
+
+Accepts `?market=US&account_size=50000&risk_pct=0.5&target_r=2.0`. Runs all scripts in sequence, then saves a full snapshot to the `analysis_run` SQLite table. Returns a log of pass/fail per script plus `run_at` timestamp. Scripts run with `PYTHONIOENCODING=utf-8` to avoid Windows cp1252 encoding errors.
+
+### Report History Database
+
+Analysis snapshots are stored in `state/market_cache.db` (`analysis_run` table) alongside the price cache. Every `/api/run` call saves a complete JSON snapshot so historical data can be queried without re-running scripts.
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/data?market=US` | Latest snapshot from DB (falls back to JSON files on first run) |
+| `GET /api/data?market=US&at=2026-05-12T09:00:00` | Historical snapshot at exact timestamp |
+| `GET /api/runs?market=US&limit=50` | List of all run timestamps, newest first |
+| `GET /api/db/stats` | DB summary: run counts per market, price cache stats |
+
+The dashboard history dropdown (`📅 ดูย้อนหลัง`) is populated from `/api/runs` and lets the user switch between any past run instantly — no re-fetch needed.
+
+### Dashboard 7-Step Flow
+
+1. **Market Health** — Breadth score + Uptrend score side by side
+2. **Distribution Day Monitor** — IBD method risk level
+3. **Exposure Strategy** — How much capital to deploy
+4. **VCP Screener** — Sortable table of VCP candidates
+5. **Breakout Trade Plan** — Buy/Stop/Target/Shares for actionable setups
+6. **Correction Duration Context** — Historical median correction lengths by sector
+7. **Earnings Trade Analyzer** — Post-earnings momentum plays
+
+### Free APIs Only
+
+The dashboard uses no paid APIs. All scripts use yfinance (free) or public data:
+- `downtrend-duration-analyzer` was migrated from FMP → yfinance + Wikipedia S&P 500 list
+- `earnings-trade-analyzer` uses yfinance by default (FMP_API_KEY forced to empty in subprocess env)
+- `ibd-distribution-day-monitor` uses yfinance by default
+- `market-breadth-analyzer` uses a free GitHub CSV for breadth data
+- `uptrend-analyzer` uses a free GitHub CSV
+
+### Windows Encoding Fix
+
+All subprocesses are started with `PYTHONIOENCODING=utf-8` and `PYTHONUTF8=1` via `_SUBPROCESS_ENV` in `app.py` to prevent cp1252 UnicodeEncodeError from emoji/arrow characters printed to stdout on Windows.

@@ -10,8 +10,20 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+# Add project scripts directory to sys.path to import gemini_adapter
+# Structure: skills/skill-idea-miner/scripts/mine_session_logs.py -> 4 levels up to root
+project_root = Path(__file__).parent.parent.parent.parent
+scripts_dir = project_root / "scripts"
+if str(scripts_dir) not in sys.path:
+    sys.path.append(str(scripts_dir))
+try:
+    import gemini_adapter
+except ImportError:
+    gemini_adapter = None
 
 import yaml
 
@@ -25,8 +37,7 @@ PROJECT_ALLOWLIST = [
     "weekly-trade-strategy",
 ]
 
-CLAUDE_TIMEOUT = 600
-CLAUDE_BUDGET_MINE = 1.00
+GEMINI_TIMEOUT = 600   # renamed from CLAUDE_TIMEOUT
 LOOKBACK_DAYS = 7
 MAX_USER_MESSAGES_PER_SESSION = 5
 MAX_ERROR_OUTPUT_LEN = 500
@@ -464,65 +475,25 @@ def abstract_with_llm(
     dry_run: bool = False,
     trading_focus: bool = True,
 ) -> list[dict] | None:
-    """Use claude CLI to abstract skill idea candidates from signals.
-
-    Returns list of candidate dicts, or None if dry_run or on failure.
-    """
-    if dry_run:
-        return None
-
-    if not shutil.which("claude"):
-        logger.warning("claude CLI not found; skipping LLM abstraction.")
+    """Use Gemini to abstract skill idea candidates from signals."""
+    if dry_run or not gemini_adapter:
         return None
 
     # Build prompt
     prompt = _build_llm_prompt(signals, user_samples, project_name, trading_focus)
 
-    # Remove CLAUDECODE env var to allow claude -p from within Claude Code terminals
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    response_text = gemini_adapter.call_gemini(
+        prompt,
+        model_name="gemini-3-flash-preview",
+        response_mime_type="application/json"
+    )
 
-    try:
-        result = subprocess.run(  # nosec B607 – claude CLI is an expected dependency
-            [
-                "claude",
-                "-p",
-                "--output-format",
-                "json",
-                "--max-turns",
-                "3",
-                f"--max-budget-usd={CLAUDE_BUDGET_MINE}",
-            ],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=CLAUDE_TIMEOUT,
-            env=env,
-        )
-
-        if result.returncode != 0:
-            logger.warning("claude -p failed: %s", result.stderr.strip()[:200])
-            return None
-
-        logger.debug("claude -p stdout (%d chars): %.500s", len(result.stdout), result.stdout)
-
-        response = _extract_json_from_claude(result.stdout, ["candidates"])
+    if response_text:
+        response = gemini_adapter.extract_json_from_text(response_text)
         if response and "candidates" in response:
             return response["candidates"]
 
-        logger.warning(
-            "Could not parse LLM candidates JSON. stdout (%d chars): %.300s",
-            len(result.stdout),
-            result.stdout,
-        )
-        return None
-
-    except subprocess.TimeoutExpired:
-        logger.warning("claude -p timed out.")
-        return None
-    except FileNotFoundError:
-        logger.warning("claude CLI not found.")
-        return None
+    return None
 
 
 def _build_llm_prompt(

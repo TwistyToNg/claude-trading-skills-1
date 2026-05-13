@@ -38,6 +38,7 @@ from calculators.ma200_calculator import calculate_ma200_position
 from calculators.pre_earnings_trend_calculator import calculate_pre_earnings_trend
 from calculators.volume_trend_calculator import calculate_volume_trend
 from fmp_client import ApiCallBudgetExceeded, FMPClient
+from yf_client import YFClient
 from report_generator import generate_json_report, generate_markdown_report
 from scorer import calculate_composite_score
 
@@ -153,12 +154,19 @@ def main():
 
     args = parser.parse_args()
 
-    # Initialize FMP client
-    try:
-        client = FMPClient(api_key=args.api_key, max_api_calls=args.max_api_calls)
-    except ValueError as e:
-        print(f"ERROR: {e}", file=sys.stderr)
-        sys.exit(1)
+    # Data client — yfinance by default; FMP when --api-key or FMP_API_KEY is set
+    import os
+    fmp_key = args.api_key or os.environ.get("FMP_API_KEY")
+    if fmp_key:
+        try:
+            client = FMPClient(api_key=fmp_key, max_api_calls=args.max_api_calls)
+            print("Using FMP API client.", file=sys.stderr)
+        except ValueError as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        client = YFClient()
+        print("Using Yahoo Finance client (no API key required).", file=sys.stderr)
 
     print("=" * 60, file=sys.stderr)
     print("Earnings Trade Analyzer - 5-Factor Scoring", file=sys.stderr)
@@ -212,7 +220,7 @@ def main():
 
         if market_cap < args.min_market_cap:
             continue
-        if exchange not in FMPClient.US_EXCHANGES:
+        if exchange not in client.US_EXCHANGES:
             continue
 
         timing = normalize_timing(earning.get("time"))
@@ -246,7 +254,7 @@ def main():
 
     # Phase 1.5: Budget check
     print("\n--- Phase 1.5: Budget Check ---", file=sys.stderr)
-    remaining_calls = args.max_api_calls - client.api_calls_made
+    remaining_calls = args.max_api_calls - getattr(client, "api_calls_made", 0)
     estimated_calls = len(candidates)  # 1 historical price call per candidate
 
     if estimated_calls > remaining_calls:

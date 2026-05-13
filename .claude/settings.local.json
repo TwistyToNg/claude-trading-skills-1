@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Select-String \"add_argument\" \"d:\\\\ex_work\\\\trading\\\\skills\\\\downtrend-duration-analyzer\\\\scripts\\\\analyze_downtrends.py\" | ForEach-Object { $_.Line.Trim\\(\\) })",
+      "PowerShell(Stop-Process -Name python -ErrorAction SilentlyContinue)",
+      "PowerShell(Start-Process -FilePath \"python\" -ArgumentList \"d:\\\\ex_work\\\\trading\\\\dashboard\\\\app.py\" -WorkingDirectory \"d:\\\\ex_work\\\\trading\" -WindowStyle Hidden)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s http://localhost:5050/api/data?market=US)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,':', type\\(v\\).__name__, '-', str\\(v\\)[:120] if not isinstance\\(v,dict\\) else list\\(v.keys\\(\\)\\)\\) for k,v in d.items\\(\\)]\")",
+      "WebSearch"
+    ]
+  }
+}

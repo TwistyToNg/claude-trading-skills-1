@@ -40,6 +40,7 @@ from calculators.trend_template_calculator import calculate_trend_template
 from calculators.vcp_pattern_calculator import calculate_vcp_pattern
 from calculators.volume_pattern_calculator import calculate_volume_pattern
 from fmp_client import FMPClient
+from yf_client import YFClient
 from report_generator import generate_json_report, generate_markdown_report
 from scorer import calculate_composite_score
 
@@ -69,6 +70,12 @@ def parse_arguments():
         "--full-sp500",
         action="store_true",
         help="Screen all S&P 500 stocks (requires paid API tier, ~350 calls)",
+    )
+    parser.add_argument(
+        "--market",
+        choices=["US", "TH"],
+        default="US",
+        help="Target market: US (S&P 500) or TH (SET50) (default: US)",
     )
     parser.add_argument(
         "--mode",
@@ -490,10 +497,16 @@ def main():
     print("=" * 70)
     print()
 
-    # Initialize FMP client
+    # Initialize data client
+    # Use YFClient (yfinance) by default — no API key required.
+    # Fall back to FMPClient only when --api-key is explicitly provided.
     try:
-        client = FMPClient(api_key=args.api_key)
-        print("FMP API client initialized")
+        if args.api_key:
+            client = FMPClient(api_key=args.api_key)
+            print("FMP API client initialized (using provided key)")
+        else:
+            client = YFClient()
+            print("Yahoo Finance client initialized (no API key required)")
     except ValueError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
@@ -510,6 +523,16 @@ def main():
         symbols = args.universe
         universe_desc = f"Custom ({len(symbols)} stocks)"
         print(f"  Using custom universe: {len(symbols)} stocks")
+        constituents = [{"symbol": s, "name": s, "sector": "Custom"} for s in symbols]
+    elif args.market == "TH":
+        print("  Fetching SET50 constituents...", end=" ", flush=True)
+        constituents = client.get_thai_constituents(index="SET50")
+        if not constituents:
+            print("FAILED")
+            sys.exit(1)
+        symbols = [c["symbol"] for c in constituents]
+        universe_desc = f"SET50 ({len(symbols)} stocks)"
+        print(f"OK ({len(symbols)} stocks)")
     else:
         print("  Fetching S&P 500 constituents...", end=" ", flush=True)
         constituents = client.get_sp500_constituents()
@@ -559,10 +582,11 @@ def main():
     print("Phase 2: Trend Template Filter")
     print("-" * 70)
 
-    # Fetch SPY historical for RS calculation
-    print("  Fetching SPY 260-day history...", end=" ", flush=True)
-    spy_data = client.get_historical_prices("SPY", days=260)
-    sp500_history = spy_data.get("historical", []) if spy_data else []
+    # Fetch Index historical for RS calculation
+    index_symbol = "^SET.BK" if args.market == "TH" else "SPY"
+    print(f"  Fetching {index_symbol} 260-day history...", end=" ", flush=True)
+    index_data = client.get_historical_prices(index_symbol, days=260)
+    sp500_history = index_data.get("historical", []) if index_data else []
     if sp500_history:
         print(f"OK ({len(sp500_history)} days)")
     else:
@@ -732,6 +756,7 @@ def main():
 
     metadata = {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "market": args.market,
         "universe_description": universe_desc,
         "max_candidates": max_candidates,
         "ext_threshold": args.ext_threshold,
@@ -790,8 +815,8 @@ def main():
     print(f"  Markdown Report: {md_file}")
     print()
     print("API Usage:")
-    print(f"  API calls made: {api_stats['api_calls_made']}")
-    print(f"  Cache entries:  {api_stats['cache_entries']}")
+    print(f"  API calls made: {api_stats.get('api_calls_made', 0)}")
+    print(f"  Cache entries:  {api_stats.get('cache_entries', 0)}")
     print()
 
 

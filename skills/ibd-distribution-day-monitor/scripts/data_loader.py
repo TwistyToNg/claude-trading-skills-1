@@ -1,4 +1,4 @@
-"""FMP wrapper + OHLCV quality validation.
+"""OHLCV quality validation + client factories.
 
 Returns most-recent-first list[dict] (no pandas). Records data quality
 issues as audit_flags / skipped_sessions for the report layer.
@@ -70,7 +70,7 @@ def fetch_ohlcv(
         - skipped_sessions: list[dict]
     """
     audit: dict = {
-        "data_source": "fmp",
+        "data_source": "yfinance",
         "symbol": symbol,
         "days_requested": days,
         "sessions_loaded": 0,
@@ -90,6 +90,13 @@ def fetch_ohlcv(
     audit["audit_flags"].extend(flags)
     audit["skipped_sessions"] = skipped
     return history, audit
+
+
+def build_yf_client():
+    """Create a yfinance-based OHLCV client (no API key required)."""
+    from yf_client import YFClient
+
+    return YFClient()
 
 
 def build_fmp_client(api_key: str | None = None, max_api_calls: int = 200):

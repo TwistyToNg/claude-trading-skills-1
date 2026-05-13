@@ -121,6 +121,7 @@ class FMPClient:
     """Client for Financial Modeling Prep API with rate limiting and caching"""
 
     BASE_URL = "https://financialmodelingprep.com/api/v3"
+    STABLE_URL = "https://financialmodelingprep.com/stable"
     RATE_LIMIT_DELAY = 0.3  # 300ms between requests
 
     _ENDPOINT_FAILURE_THRESHOLD = 3  # disable endpoint after N consecutive failures
@@ -271,6 +272,10 @@ class FMPClient:
     def get_sp500_constituents(self) -> Optional[list[dict]]:
         """Fetch S&P 500 constituent list.
 
+        Tries FMP stable endpoint first, then falls back to Wikipedia
+        (free public data) for new FMP accounts that don't have access
+        to the paid constituent endpoint.
+
         Returns:
             List of dicts with keys: symbol, name, sector, subSector
             or None on failure.
@@ -279,11 +284,89 @@ class FMPClient:
         if cache_key in self.cache:
             return self.cache[cache_key]
 
-        url = f"{self.BASE_URL}/sp500_constituent"
-        data = self._rate_limited_get(url)
+        # 1. Try stable FMP endpoint
+        url = f"{self.STABLE_URL}/sp500-constituent"
+        data = self._rate_limited_get(url, quiet=True)
+
+        # 2. Try legacy v3 FMP endpoint
+        if not data:
+            url = f"{self.BASE_URL}/sp500_constituent"
+            data = self._rate_limited_get(url, quiet=True)
+
+        # 3. Free fallback: Wikipedia S&P 500 table (public data, no auth needed)
+        if not data:
+            data = self._get_sp500_from_wikipedia()
+
         if data:
             self.cache[cache_key] = data
         return data
+
+    def _get_sp500_from_wikipedia(self) -> Optional[list[dict]]:
+        """Scrape S&P 500 constituents from Wikipedia as a free fallback.
+
+        Returns list of dicts with 'symbol', 'name', 'sector', 'subSector'.
+        Returns None on failure.
+        """
+        try:
+            import html
+            import re
+
+            url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+            headers = {"User-Agent": "Mozilla/5.0 (compatible; VCPScreener/1.0)"}
+            resp = requests.get(url, headers=headers, timeout=15)
+            if resp.status_code != 200:
+                print(
+                    f"WARNING: Wikipedia SP500 fallback failed ({resp.status_code})",
+                    file=sys.stderr,
+                )
+                return None
+
+            # Parse the first wikitable (the constituents table)
+            table_match = re.search(
+                r'<table[^>]*class="[^"]*wikitable[^"]*"[^>]*>(.*?)</table>',
+                resp.text,
+                re.DOTALL,
+            )
+            if not table_match:
+                return None
+
+            table_html = table_match.group(1)
+            rows = re.findall(r"<tr[^>]*>(.*?)</tr>", table_html, re.DOTALL)
+
+            constituents = []
+            for row in rows[1:]:  # skip header row
+                cells = re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, re.DOTALL)
+                if len(cells) < 4:
+                    continue
+                # Strip HTML tags and decode entities
+                def strip(s):
+                    s = re.sub(r"<[^>]+>", "", s)
+                    return html.unescape(s).strip()
+
+                symbol = strip(cells[0]).replace(".", "-")  # BRK.B -> BRK-B
+                name = strip(cells[1])
+                sector = strip(cells[2])
+                sub_sector = strip(cells[3])
+                if symbol:
+                    constituents.append(
+                        {
+                            "symbol": symbol,
+                            "name": name,
+                            "sector": sector,
+                            "subSector": sub_sector,
+                        }
+                    )
+
+            if constituents:
+                print(
+                    f"  (Using Wikipedia S&P 500 list: {len(constituents)} stocks)",
+                    flush=True,
+                )
+            return constituents if constituents else None
+
+        except Exception as e:
+            print(f"WARNING: Wikipedia SP500 fallback error: {e}", file=sys.stderr)
+            return None
 
     def get_quote(self, symbols: str) -> Optional[list[dict]]:
         """Fetch real-time quote data for one or more symbols (comma-separated)"""
@@ -308,9 +391,18 @@ class FMPClient:
         return data
 
     def get_batch_quotes(self, symbols: list[str]) -> dict[str, dict]:
-        """Fetch quotes for a list of symbols, batching up to 5 per request"""
+        """Fetch quotes for a list of symbols.
+
+        Free-tier FMP accounts cannot batch-quote multiple symbols.
+        This method first attempts batch requests (5 per call) and
+        automatically falls back to one-by-one fetching via the stable
+        endpoint when batch calls fail.
+        """
         results = {}
+
+        # --- Phase A: try batch (5 at a time) via fallback chain ---
         batch_size = 5
+        failed_batches: list[str] = []
         for i in range(0, len(symbols), batch_size):
             batch = symbols[i : i + batch_size]
             batch_str = ",".join(batch)
@@ -318,6 +410,24 @@ class FMPClient:
             if quotes:
                 for q in quotes:
                     results[q["symbol"]] = q
+            else:
+                failed_batches.extend(batch)
+
+        # --- Phase B: retry failed symbols one-by-one via stable endpoint ---
+        if failed_batches:
+            total = len(failed_batches)
+            for idx, sym in enumerate(failed_batches):
+                if self.rate_limit_reached:
+                    break
+                if (idx + 1) % 10 == 0 or idx == total - 1:
+                    print(f"    Fetching quotes ({idx + 1}/{total})...", flush=True)
+                url = f"https://financialmodelingprep.com/stable/quote"
+                data = self._rate_limited_get(url, {"symbol": sym}, quiet=True)
+                if data and isinstance(data, list):
+                    for q in data:
+                        if isinstance(q, dict) and q.get("symbol"):
+                            results[q["symbol"]] = q
+
         return results
 
     def get_batch_historical(self, symbols: list[str], days: int = 260) -> dict[str, list[dict]]:

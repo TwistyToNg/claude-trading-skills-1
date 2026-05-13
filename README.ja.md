@@ -96,6 +96,24 @@ English README is available at [`README.md`](README.md).
 | Strategy Research | `backtest-expert`, `edge-pipeline-orchestrator` |
 | Advanced Satellite | `parabolic-short-trade-planner`, `earnings-trade-analyzer`, `options-strategy-advisor` |
 
+## トレード・インテリジェンス・ダッシュボード (Dashboard)
+
+このリポジトリには、各スキルの出力を統合し、プレミアムな意思決定支援 UI を提供するローカル Flask ウェブ ダッシュボードが含まれています。
+
+### 特徴
+- **7段階ワークフロー**: 市場幅（Breadth）から具体的なトレード計画（Trade Plans）まで、論理的なステップでガイドします。
+- **スナップショット履歴**: すべての実行結果はローカルの SQLite データベースに保存され、📅 ドロップダウンから過去の分析結果を即座に参照できます。
+- **二国間市場対応**: **米国株 (S&P 500)** と **日本・タイ株 (SET50)** の表示をシームレスに切り替え可能です。
+- **インタラクティブ・チャート**: TradingView Lightweight Charts を搭載し、テクニカル分析の最終確認が可能です。
+
+### クイックスタート
+```bash
+cd dashboard
+python app.py
+# ブラウザで http://localhost:5050 を開きます
+```
+
+## はじめに
 以下の詳細カタログはクイックリファレンスとして残しています。より見やすい一覧はドキュメントサイトを参照してください。
 
 ## 詳細スキル一覧

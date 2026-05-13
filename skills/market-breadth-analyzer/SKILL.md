@@ -1,6 +1,6 @@
 ---
 name: market-breadth-analyzer
-description: Quantifies market breadth health using TraderMonty's public CSV data. Generates a 0-100 composite score across 6 components (100 = healthy). No API key required. Use when user asks about market breadth, participation rate, advance-decline health, whether the rally is broad-based, or general market health assessment.
+description: Quantifies market breadth health using data-driven 6-component scoring. Supports US (S&P 500) and Thai (SET50) markets. Use when user asks about market breadth, participation, or general market health assessment in either market.
 ---
 
 # Market Breadth Analyzer Skill
@@ -50,21 +50,23 @@ Quantify market breadth health using a data-driven 6-component scoring system (0
 
 ### Phase 1: Execute Python Script
 
-Run the analysis script:
+Execute the analysis script for the desired market:
 
 ```bash
-python3 skills/market-breadth-analyzer/scripts/market_breadth_analyzer.py \
-  --detail-url "https://tradermonty.github.io/market-breadth-analysis/market_breadth_data.csv" \
-  --summary-url "https://tradermonty.github.io/market-breadth-analysis/market_breadth_summary.csv"
+# Analyze US Market (Default)
+python3 skills/market-breadth-analyzer/scripts/market_breadth_analyzer.py --market US
+
+# Analyze Thai Market (SET50)
+python3 skills/market-breadth-analyzer/scripts/market_breadth_analyzer.py --market TH
 ```
 
-The script will:
-1. Fetch detail CSV (~2,500 rows, 2016-present) and summary CSV (8 metrics)
-2. Validate data freshness (warn if > 5 days old)
-3. Calculate all 6 component scores (with automatic weight redistribution if any component lacks data)
+**Key Actions:**
+1. Fetch latest market data (US uses GitHub CSV; TH performs live calculation on SET50 constituents)
+2. Validate data freshness
+3. Calculate all 6 component scores
 4. Generate composite score with zone classification
-5. Track score history and compute trend (improving/deteriorating/stable)
-6. Output JSON and Markdown reports
+5. Compute trend (improving/deteriorating/stable)
+6. Save JSON and Markdown reports to `reports/`
 
 ### Phase 2: Present Results
 
@@ -73,7 +75,6 @@ Present the generated Markdown report to the user, highlighting:
 - Strongest and weakest components
 - Recommended equity exposure level
 - Key breadth levels to watch
-- Any data freshness warnings
 
 ---
 

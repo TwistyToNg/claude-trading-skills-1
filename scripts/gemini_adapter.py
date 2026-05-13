@@ -1,0 +1,314 @@
+"""Gemini Adapter — migrated to google-genai SDK (google.generativeai is deprecated).
+
+Usage:
+    - call_gemini(prompt, ...)           → simple text/JSON call
+    - run_gemini_agent(prompt, ...)      → agentic loop with file tools
+    - extract_json_from_text(text)       → parse JSON from LLM output
+"""
+import json
+import logging
+import os
+import re
+from typing import Any
+
+logger = logging.getLogger("gemini_adapter")
+
+
+def _get_client():
+    """Return a configured google.genai client, or None if API key missing."""
+    try:
+        from google import genai
+    except ImportError:
+        logger.error("google-genai package not installed. Run: pip install google-genai")
+        return None, None
+
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        logger.error(
+            "Gemini API key not found. Set GEMINI_API_KEY or GOOGLE_API_KEY environment variable."
+        )
+        return None, None
+
+    client = genai.Client(api_key=api_key)
+    return client, genai
+
+
+def call_gemini(
+    prompt: str,
+    model_name: str = "gemini-3-flash-preview",
+    temperature: float = 0.2,
+    max_output_tokens: int = 8192,
+    response_mime_type: str = "text/plain",
+) -> str | None:
+    """Call Gemini API and return the text response."""
+    client, genai = _get_client()
+    if client is None:
+        return None
+
+    try:
+        config_kwargs: dict[str, Any] = {
+            "temperature": temperature,
+            "max_output_tokens": max_output_tokens,
+        }
+        if response_mime_type == "application/json":
+            config_kwargs["response_mime_type"] = "application/json"
+
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=genai.types.GenerateContentConfig(**config_kwargs),
+        )
+
+        if not response or not response.text:
+            logger.error("Gemini returned an empty response.")
+            return None
+
+        return response.text
+
+    except Exception as e:
+        logger.error("Error calling Gemini API: %s", e)
+        return None
+
+
+# ── File Tool Implementations ─────────────────────────────────────────────────
+
+
+def read_file(path: str) -> str:
+    """Read a file from the filesystem."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        return f"Error reading file {path}: {e}"
+
+
+def write_file(path: str, content: str) -> str:
+    """Write content to a file (creates parent directories if needed)."""
+    try:
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return f"Successfully wrote to {path}"
+    except Exception as e:
+        return f"Error writing to file {path}: {e}"
+
+
+def list_files(path: str) -> str:
+    """List files in a directory."""
+    try:
+        items = os.listdir(path)
+        return "\n".join(items) if items else "(empty directory)"
+    except Exception as e:
+        return f"Error listing directory {path}: {e}"
+
+
+def grep_search(pattern: str, path: str) -> str:
+    """Search for a regex pattern in all files under a path."""
+    results: list[str] = []
+    try:
+        for root, _, files in os.walk(path):
+            for file in files:
+                full_path = os.path.join(root, file)
+                try:
+                    with open(full_path, encoding="utf-8", errors="ignore") as f:
+                        for i, line in enumerate(f, 1):
+                            if re.search(pattern, line):
+                                results.append(f"{full_path}:{i}: {line.strip()}")
+                except (OSError, UnicodeDecodeError):
+                    continue
+        return "\n".join(results[:100]) or "No matches found."
+    except Exception as e:
+        return f"Error searching in {path}: {e}"
+
+
+# ── Agentic Loop ──────────────────────────────────────────────────────────────
+
+_TOOL_MAP = {
+    "read_file": read_file,
+    "write_file": write_file,
+    "list_files": list_files,
+    "grep_search": grep_search,
+}
+
+
+def run_gemini_agent(
+    prompt: str,
+    model_name: str = "gemini-3-flash-preview",
+    max_turns: int = 10,
+) -> bool:
+    """Run a Gemini agentic loop with file tools.
+
+    The agent can call read_file, write_file, list_files, grep_search
+    in a loop until it produces a final text response.
+
+    Returns True if the agent produced a final response, False on error.
+    """
+    client, genai = _get_client()
+    if client is None:
+        return False
+
+    # Declare tools to Gemini
+    tools = [
+        genai.types.Tool(
+            function_declarations=[
+                genai.types.FunctionDeclaration(
+                    name="read_file",
+                    description="Read a file from the local filesystem.",
+                    parameters=genai.types.Schema(
+                        type="OBJECT",
+                        properties={"path": genai.types.Schema(type="STRING")},
+                        required=["path"],
+                    ),
+                ),
+                genai.types.FunctionDeclaration(
+                    name="write_file",
+                    description="Write content to a file on the local filesystem.",
+                    parameters=genai.types.Schema(
+                        type="OBJECT",
+                        properties={
+                            "path": genai.types.Schema(type="STRING"),
+                            "content": genai.types.Schema(type="STRING"),
+                        },
+                        required=["path", "content"],
+                    ),
+                ),
+                genai.types.FunctionDeclaration(
+                    name="list_files",
+                    description="List files in a directory.",
+                    parameters=genai.types.Schema(
+                        type="OBJECT",
+                        properties={"path": genai.types.Schema(type="STRING")},
+                        required=["path"],
+                    ),
+                ),
+                genai.types.FunctionDeclaration(
+                    name="grep_search",
+                    description="Search for a regex pattern in files under a path.",
+                    parameters=genai.types.Schema(
+                        type="OBJECT",
+                        properties={
+                            "pattern": genai.types.Schema(type="STRING"),
+                            "path": genai.types.Schema(type="STRING"),
+                        },
+                        required=["pattern", "path"],
+                    ),
+                ),
+            ]
+        )
+    ]
+
+    contents = [{"role": "user", "parts": [{"text": prompt}]}]
+
+    try:
+        for turn in range(max_turns):
+            response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=genai.types.GenerateContentConfig(
+                    tools=tools,
+                    temperature=0.2,
+                    max_output_tokens=8192,
+                ),
+            )
+
+            candidate = response.candidates[0] if response.candidates else None
+            if candidate is None:
+                logger.error("Gemini agent: no candidate in response.")
+                return False
+
+            # Check if we have tool calls
+            tool_calls = [
+                part.function_call
+                for part in candidate.content.parts
+                if hasattr(part, "function_call") and part.function_call
+            ]
+
+            if not tool_calls:
+                # Final text response — done
+                logger.info("Gemini agent completed in %d turn(s).", turn + 1)
+                return True
+
+            # Execute each tool call and feed results back
+            tool_results = []
+            for fc in tool_calls:
+                fn = _TOOL_MAP.get(fc.name)
+                if fn:
+                    result = fn(**dict(fc.args))
+                else:
+                    result = f"Unknown tool: {fc.name}"
+                logger.debug("Tool %s → %s chars", fc.name, len(str(result)))
+                tool_results.append(
+                    {
+                        "function_response": {
+                            "name": fc.name,
+                            "response": {"output": str(result)},
+                        }
+                    }
+                )
+
+            # Append model response and tool results to conversation
+            contents.append({"role": "model", "parts": candidate.content.parts})
+            contents.append({"role": "user", "parts": tool_results})
+
+        logger.warning("Gemini agent reached max_turns (%d) without finishing.", max_turns)
+        return False
+
+    except Exception as e:
+        logger.error("Gemini agent error: %s", e)
+        return False
+
+
+# ── JSON Helper ───────────────────────────────────────────────────────────────
+
+
+def extract_json_from_text(text: str) -> dict | None:
+    """Extract and parse JSON from an LLM response string."""
+    if not text:
+        return None
+
+    text = text.strip()
+
+    # 1. Try direct parse
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # 2. Try to strip markdown code fences
+    stripped = re.sub(r"^```(?:json)?\s*", "", text)
+    stripped = re.sub(r"\s*```$", "", stripped).strip()
+    try:
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        pass
+
+    # 3. Scan for JSON object using raw_decode
+    decoder = json.JSONDecoder()
+    idx = 0
+    while idx < len(text):
+        pos = text.find("{", idx)
+        if pos == -1:
+            break
+        try:
+            obj, _ = decoder.raw_decode(text, pos)
+            if isinstance(obj, dict):
+                return obj
+            idx = pos + 1
+        except json.JSONDecodeError:
+            idx = pos + 1
+
+    return None
+
+
+if __name__ == "__main__":
+    import sys
+
+    logging.basicConfig(level=logging.INFO)
+    test_prompt = "Reply with only a JSON object: {\"status\": \"ok\", \"model\": \"gemini-3-flash\"}"
+    result = call_gemini(test_prompt, response_mime_type="application/json")
+    print("Response:", result)
+    parsed = extract_json_from_text(result or "")
+    print("Parsed JSON:", parsed)
+    sys.exit(0 if parsed else 1)

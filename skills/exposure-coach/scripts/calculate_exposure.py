@@ -548,8 +548,19 @@ def main():
 
     # Build result
     now = datetime.now(timezone.utc)
+    # Inherit market from breadth data if available, default to US
+    market = "US"
+    if breadth_data and "metadata" in breadth_data:
+        market = breadth_data["metadata"].get("market", "US")
+    elif breadth_data:
+        market = breadth_data.get("market", "US")
+
     result = {
         "schema_version": "1.0",
+        "metadata": {
+            "generated_at": now.isoformat(),
+            "market": market
+        },
         "generated_at": now.isoformat(),
         "exposure_ceiling_pct": exposure_ceiling,
         "bias": bias,

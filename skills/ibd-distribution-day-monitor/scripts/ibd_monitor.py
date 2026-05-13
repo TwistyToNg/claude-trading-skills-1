@@ -30,7 +30,7 @@ import yaml  # type: ignore
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from data_loader import build_fmp_client, fetch_ohlcv  # noqa: E402
+from data_loader import build_fmp_client, build_yf_client, fetch_ohlcv  # noqa: E402
 from distribution_day_tracker import (  # noqa: E402
     count_active_in_window,
     detect_distribution_days,
@@ -71,17 +71,14 @@ def load_config(path: str | None) -> dict:
         return yaml.safe_load(f) or {}
 
 
-def resolve_api_key(cli_key: str | None, config: dict) -> str:
-    """API key precedence: CLI > config.data.api_key > $FMP_API_KEY."""
+def resolve_api_key(cli_key: str | None, config: dict) -> str | None:
+    """API key precedence: CLI > config.data.api_key > $FMP_API_KEY. Returns None if not found."""
     if cli_key:
         return cli_key
     cfg_key = ((config.get("data") or {}).get("api_key")) or None
     if cfg_key:
         return cfg_key
-    env_key = os.getenv("FMP_API_KEY")
-    if env_key:
-        return env_key
-    raise ValueError("FMP API key required. Pass --api-key or set FMP_API_KEY env var.")
+    return os.getenv("FMP_API_KEY") or None
 
 
 def _build_rule(config: dict) -> DistributionDayRule:
@@ -343,9 +340,14 @@ def main(argv: list[str] | None = None) -> int:
             {"symbol": s, "benchmark_name": f"{s} proxy"} for s in config["symbols_override"]
         ]
 
-    # FMP client
+    # Data client — yfinance by default; FMP when --api-key or FMP_API_KEY is set
     api_key = resolve_api_key(args.api_key, config)
-    client = build_fmp_client(api_key=api_key)
+    if api_key:
+        client = build_fmp_client(api_key=api_key)
+        print("Using FMP API client.")
+    else:
+        client = build_yf_client()
+        print("Using Yahoo Finance client (no API key required).")
 
     rule = _build_rule(config)
     thresholds = _build_thresholds(config)
@@ -403,7 +405,7 @@ def main(argv: list[str] | None = None) -> int:
 
     generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     aggregate_audit = {
-        "data_source": "fmp",
+        "data_source": "yfinance" if not api_key else "fmp",
         "rule_version": RULE_VERSION,
         "as_of_resolved": as_of_resolved,
         "lookback_days": lookback,

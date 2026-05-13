@@ -18,7 +18,9 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import requests
+
+from yf_client import fetch_historical_prices as _yf_fetch_prices
+from yf_client import fetch_sp500_list
 
 # Market cap tier thresholds (in billions USD)
 MARKET_CAP_TIERS = {
@@ -44,20 +46,6 @@ DEFAULT_SECTORS = [
 ]
 
 
-def get_api_key(api_key_arg: str | None) -> str:
-    """Get FMP API key from argument or environment variable."""
-    if api_key_arg:
-        return api_key_arg
-    api_key = os.environ.get("FMP_API_KEY")
-    if not api_key:
-        print(
-            "Error: FMP API key required. Set FMP_API_KEY environment variable or use --api-key",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    return api_key
-
-
 def get_market_cap_tier(market_cap: float | None) -> str:
     """Classify market cap into tier."""
     if market_cap is None:
@@ -70,74 +58,6 @@ def get_market_cap_tier(market_cap: float | None) -> str:
         return "Mid"
     else:
         return "Small"
-
-
-def fetch_stock_list(api_key: str, sector: str | None = None) -> list[dict]:
-    """Fetch list of stocks, optionally filtered by sector."""
-    url = f"https://financialmodelingprep.com/api/v3/stock-screener?apikey={api_key}"
-    if sector:
-        url += f"&sector={sector.replace(' ', '%20')}"
-    url += "&isActivelyTrading=true&limit=500"
-
-    try:
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        print(f"Error fetching stock list: {e}", file=sys.stderr)
-        return []
-
-
-# --- FMP endpoint fallback: stable (new users) -> v3 (legacy users) ---
-_FMP_HIST_ENDPOINTS = [
-    ("https://financialmodelingprep.com/stable/historical-price-full", True),
-    ("https://financialmodelingprep.com/api/v3/historical-price-full", False),
-]
-_endpoint_failures: dict[str, int] = {}
-_BREAKER_THRESHOLD = 3
-
-
-def fetch_historical_prices(
-    api_key: str, symbol: str, from_date: str, to_date: str
-) -> pd.DataFrame:
-    """Fetch historical daily prices for a symbol."""
-    for base_url, is_stable in _FMP_HIST_ENDPOINTS:
-        if _endpoint_failures.get(base_url, 0) >= _BREAKER_THRESHOLD:
-            continue
-        if is_stable:
-            url = base_url
-            params = {"symbol": symbol, "from": from_date, "to": to_date, "apikey": api_key}
-        else:
-            url = f"{base_url}/{symbol}"
-            params = {"from": from_date, "to": to_date, "apikey": api_key}
-        try:
-            response = requests.get(url, params=params, timeout=30)
-            if response.status_code != 200:
-                _endpoint_failures[base_url] = _endpoint_failures.get(base_url, 0) + 1
-                continue
-            data = response.json()
-            historical = None
-            if isinstance(data, dict) and "historical" in data:
-                historical = data["historical"]
-            elif isinstance(data, dict) and "historicalStockList" in data:
-                for entry in data["historicalStockList"]:
-                    if entry.get("symbol", "").replace("-", ".") == symbol.replace("-", "."):
-                        historical = entry.get("historical", [])
-                        break
-            if historical is not None:
-                _endpoint_failures[base_url] = 0
-                df = pd.DataFrame(historical)
-                if df.empty:
-                    return df
-                df["date"] = pd.to_datetime(df["date"])
-                df = df.sort_values("date").reset_index(drop=True)
-                return df[["date", "open", "high", "low", "close", "volume"]]
-            _endpoint_failures[base_url] = _endpoint_failures.get(base_url, 0) + 1
-        except requests.RequestException:
-            _endpoint_failures[base_url] = _endpoint_failures.get(base_url, 0) + 1
-            continue
-    print(f"Error fetching prices for {symbol}: all endpoints failed", file=sys.stderr)
-    return pd.DataFrame()
 
 
 def detect_peaks_troughs(
@@ -234,7 +154,6 @@ def find_downtrends(
 
 
 def analyze_symbol(
-    api_key: str,
     symbol: str,
     sector: str,
     market_cap: float | None,
@@ -245,7 +164,7 @@ def analyze_symbol(
     min_depth_pct: float,
 ) -> list[dict]:
     """Analyze downtrends for a single symbol."""
-    prices = fetch_historical_prices(api_key, symbol, from_date, to_date)
+    prices = _yf_fetch_prices(symbol, from_date, to_date)
 
     if prices.empty or len(prices) < peak_window * 2 + 1:
         return []
@@ -399,10 +318,6 @@ def main() -> None:
         description="Analyze historical downtrend durations by sector and market cap"
     )
     parser.add_argument(
-        "--api-key",
-        help="FMP API key (or set FMP_API_KEY env var)",
-    )
-    parser.add_argument(
         "--sector",
         help="Filter to specific sector (e.g., 'Technology')",
     )
@@ -445,8 +360,6 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    api_key = get_api_key(args.api_key)
-
     # Calculate date range
     to_date = datetime.now().strftime("%Y-%m-%d")
     from_date = (datetime.now() - timedelta(days=365 * args.lookback_years)).strftime("%Y-%m-%d")
@@ -454,7 +367,7 @@ def main() -> None:
     print(f"Analyzing downtrends from {from_date} to {to_date}")
 
     # Get stock list
-    stocks = fetch_stock_list(api_key, args.sector)
+    stocks = fetch_sp500_list(args.sector)
     if not stocks:
         print("No stocks found matching criteria", file=sys.stderr)
         sys.exit(1)
@@ -473,7 +386,6 @@ def main() -> None:
             print(f"  Progress: {i}/{len(stocks)} stocks processed")
 
         downtrends = analyze_symbol(
-            api_key,
             symbol,
             sector,
             market_cap,

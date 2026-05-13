@@ -1,40 +1,39 @@
 ---
 name: vcp-screener
-description: Screen S&P 500 stocks for Mark Minervini's Volatility Contraction Pattern (VCP). Identifies Stage 2 uptrend stocks forming tight bases with contracting volatility near breakout pivot points. Use when user requests VCP screening, Minervini-style setups, tight base patterns, volatility contraction breakout candidates, or Stage 2 momentum stock scanning.
+description: Screen S&P 500 (US) or SET50 (Thai) stocks for Mark Minervini's Volatility Contraction Pattern (VCP). Identifies Stage 2 uptrend stocks forming tight bases with contracting volatility near breakout pivot points.
 ---
 
 # VCP Screener - Minervini Volatility Contraction Pattern
 
-Screen S&P 500 stocks for Mark Minervini's Volatility Contraction Pattern (VCP), identifying Stage 2 uptrend stocks with contracting volatility near breakout pivot points.
+Screen stocks for Mark Minervini's Volatility Contraction Pattern (VCP), identifying Stage 2 uptrend stocks with contracting volatility near breakout pivot points. Supports both US and Thai markets.
 
 ## When to Use
 
 - User asks for VCP screening or Minervini-style setups
 - User wants to find tight base / volatility contraction patterns
-- User requests Stage 2 momentum stock scanning
+- User requests Stage 2 momentum stock scanning in US or Thai markets
 - User asks for breakout candidates with defined risk
 
 ## Prerequisites
 
-- FMP API key (set `FMP_API_KEY` environment variable or pass `--api-key`)
-- Free tier (250 calls/day) is sufficient for default screening (top 100 candidates)
-- Paid tier recommended for full S&P 500 screening (`--full-sp500`)
+- FMP API key (for US market full scans) or yfinance (free, default for Thai and selective US universes)
+- Python 3.9+ with `yfinance` and `pandas`
 
 ## Workflow
 
 ### Step 1: Prepare and Execute Screening
 
-Run the VCP screener script:
+Execute the VCP screener script for the desired market:
 
 ```bash
-# Default: S&P 500, top 100 candidates
-python3 skills/vcp-screener/scripts/screen_vcp.py --output-dir skills/vcp-screener/scripts
+# US Market: Default (top 100 S&P 500)
+python3 skills/vcp-screener/scripts/screen_vcp.py --market US
+
+# Thai Market: SET50 constituents
+python3 skills/vcp-screener/scripts/screen_vcp.py --market TH
 
 # Custom universe
-python3 skills/vcp-screener/scripts/screen_vcp.py --universe AAPL NVDA MSFT AMZN META --output-dir skills/vcp-screener/scripts
-
-# Full S&P 500 (paid API tier)
-python3 skills/vcp-screener/scripts/screen_vcp.py --full-sp500 --output-dir skills/vcp-screener/scripts
+python3 skills/vcp-screener/scripts/screen_vcp.py --universe AAPL NVDA --market US
 ```
 
 ### Strict Mode (Minervini pure setup)

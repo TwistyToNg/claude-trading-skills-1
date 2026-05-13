@@ -10,16 +10,27 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Add project scripts directory to sys.path to import gemini_adapter
+# Structure: skills/skill-idea-miner/scripts/score_ideas.py -> 4 levels up to root
+project_root = Path(__file__).parent.parent.parent.parent
+scripts_dir = project_root / "scripts"
+if str(scripts_dir) not in sys.path:
+    sys.path.append(str(scripts_dir))
+try:
+    import gemini_adapter
+except ImportError:
+    gemini_adapter = None
 
 import yaml
 
 logger = logging.getLogger("skill_idea_scorer")
 
-CLAUDE_TIMEOUT = 600
-CLAUDE_BUDGET_SCORE = 0.50
+GEMINI_TIMEOUT = 600   # renamed from CLAUDE_TIMEOUT
 JACCARD_THRESHOLD = 0.5
 
 
@@ -136,29 +147,14 @@ def find_duplicates(
 
 
 def score_with_llm(candidates: list[dict], dry_run: bool = False) -> list[dict]:
-    """Score non-duplicate candidates using Claude CLI.
-
-    Scores each candidate on novelty, feasibility, and trading_value (0-100).
-    Composite = 0.3 * novelty + 0.3 * feasibility + 0.4 * trading_value.
-    """
+    """Score non-duplicate candidates using Gemini."""
     scorable = [c for c in candidates if c.get("status") != "duplicate"]
 
     if not scorable:
         logger.info("No candidates to score (all duplicates or empty).")
         return candidates
 
-    if dry_run:
-        for c in scorable:
-            c["scores"] = {
-                "novelty": 0,
-                "feasibility": 0,
-                "trading_value": 0,
-                "composite": 0,
-            }
-        return candidates
-
-    if not shutil.which("claude"):
-        logger.warning("claude CLI not found; setting zero scores.")
+    if dry_run or not gemini_adapter:
         for c in scorable:
             c["scores"] = {
                 "novelty": 0,
@@ -190,40 +186,14 @@ def score_with_llm(candidates: list[dict], dry_run: bool = False) -> list[dict]:
         '{"candidates": [{"id": "...", "novelty": 0, "feasibility": 0, "trading_value": 0}]}'
     )
 
-    # Remove CLAUDECODE env var to allow claude -p from within Claude Code terminals
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    response_text = gemini_adapter.call_gemini(
+        prompt,
+        model_name="gemini-3-flash-preview",
+        response_mime_type="application/json"
+    )
 
-    try:
-        result = subprocess.run(  # nosec B607 – claude CLI is an expected dependency
-            [
-                "claude",
-                "-p",
-                "--output-format",
-                "json",
-                "--max-turns",
-                "3",
-                f"--max-budget-usd={CLAUDE_BUDGET_SCORE}",
-            ],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=CLAUDE_TIMEOUT,
-            env=env,
-        )
-
-        if result.returncode != 0:
-            logger.warning("claude scoring failed: %s", result.stderr.strip()[:200])
-            for c in scorable:
-                c["scores"] = {
-                    "novelty": 0,
-                    "feasibility": 0,
-                    "trading_value": 0,
-                    "composite": 0,
-                }
-            return candidates
-
-        parsed = _extract_json_from_claude(result.stdout, ["scores", "candidates"])
+    if response_text:
+        parsed = gemini_adapter.extract_json_from_text(response_text)
         if parsed and "candidates" in parsed:
             score_map = {s.get("id", ""): s for s in parsed.get("candidates", [])}
             for c in scorable:
@@ -246,24 +216,16 @@ def score_with_llm(candidates: list[dict], dry_run: bool = False) -> list[dict]:
                         "trading_value": 0,
                         "composite": 0,
                     }
-        else:
-            logger.warning("Could not parse LLM scoring output.")
-            for c in scorable:
-                c["scores"] = {
-                    "novelty": 0,
-                    "feasibility": 0,
-                    "trading_value": 0,
-                    "composite": 0,
-                }
+            return candidates
 
-    except subprocess.TimeoutExpired:
-        logger.warning("claude scoring timed out.")
-        for c in scorable:
-            c["scores"] = {"novelty": 0, "feasibility": 0, "trading_value": 0, "composite": 0}
-    except FileNotFoundError:
-        logger.warning("claude CLI not found during execution.")
-        for c in scorable:
-            c["scores"] = {"novelty": 0, "feasibility": 0, "trading_value": 0, "composite": 0}
+    logger.warning("Gemini scoring failed or returned invalid JSON.")
+    for c in scorable:
+        c["scores"] = {
+            "novelty": 0,
+            "feasibility": 0,
+            "trading_value": 0,
+            "composite": 0,
+        }
 
     return candidates
 

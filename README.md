@@ -1,16 +1,17 @@
 # Claude Trading Skills
 
-Claude Trading Skills started as a personal project to use AI to improve my own trading process.
+> **Professional AI-Driven Trading Workstation**
+> *A high-performance toolkit for market regime analysis, risk management, and algorithmic trade planning.*
 
-Claude Trading Skills is a Claude Skills-based trading workflow toolkit for time-constrained individual investors.
+---
 
-It is designed for investors who use long-term investing, ETFs, and dividend stocks as their core, while using disciplined swing trading as a satellite strategy when market conditions are favorable.
+## 🌟 Portfolio Highlights
+- **50+ Specialized AI Skills:** Automating everything from Market Breadth analysis to CANSLIM screening.
+- **Deep API Integration:** Seamlessly connects with Alpaca (Execution), Financial Modeling Prep (Data), and Finviz.
+- **Evidence-Based Logic:** Implements proven methodologies like Minervini's VCP and O'Neil's CANSLIM.
+- **Clean Architecture:** Built for extensibility using Python-based "Skills" that bridge LLM intelligence with financial data.
 
-The goal is not to outsource buy/sell decisions to AI. The goal is to structure market review, risk management, trade planning, journaling, and continuous improvement. It is open source because the workflows, checklists, and review habits behind better trading decisions can improve through shared practice.
-
-This is not a signal service or a promise of profitability. It is a toolkit for traders who want to build a better decision process.
-
-The project follows a **first for self, open for others** stance: it is built first as a practical workflow the author uses, then shared openly for others who face similar constraints.
+---
 
 📖 **Documentation site:** <https://tradermonty.github.io/claude-trading-skills/>
 
@@ -665,14 +666,15 @@ Several skills require API keys for data access:
 | **Kanchi Dividend SOP** | ❌ Not used | ❌ Not used | ❌ Not used | Knowledge workflow; uses outputs from other skills or manual lists |
 | **Kanchi Dividend Review Monitor** | ❌ Not used | ❌ Not used | ❌ Not used | Local rule engine; consumes normalized input JSON |
 | **Kanchi Dividend US Tax Accounting** | ❌ Not used | ❌ Not used | ❌ Not used | Knowledge workflow for classification/account location |
+| **Earnings Trade Analyzer** | ❌ Not required | ❌ Not used | ❌ Not used | Uses yfinance by default; FMP optional via --api-key |
 | **Pair Trade Screener** | ✅ Required | ❌ Not used | ❌ Not used | Statistical arbitrage analysis |
 | **Options Strategy Advisor** | 🟡 Optional | ❌ Not used | ❌ Not used | FMP for stock data; theoretical pricing works without |
 | **Portfolio Manager** | ❌ Not used | ❌ Not used | ✅ Required | Real-time holdings via Alpaca MCP |
 | **CANSLIM Stock Screener** | ✅ Required | ❌ Not used | ❌ Not used | Phase 3.1 (7 components, multi-period RS); free tier sufficient for 35 stocks; Finviz web scraping for institutional data |
-| **VCP Screener** | ✅ Required | ❌ Not used | ❌ Not used | Stage 2 + VCP pattern screening; free tier sufficient |
+| **VCP Screener** | ❌ Not required | ❌ Not used | ❌ Not used | Uses yfinance by default; FMP optional via --api-key |
 | **Parabolic Short Trade Planner** | ✅ Required | ❌ Not used | ✅ Phase 3 / 🟡 Phase 2 | FMP for Phase 1 screener; Alpaca required for Phase 3 intraday bars (paper feed OK), optional for Phase 2 borrow checks. No SDK — `requests` direct |
 | **FTD Detector** | ✅ Required | ❌ Not used | ❌ Not used | Index price data for rally/FTD detection |
-| **IBD Distribution Day Monitor** | ✅ Required | ❌ Not used | ❌ Not used | Daily QQQ/SPY OHLCV for Distribution Day detection |
+| **IBD Distribution Day Monitor** | ❌ Not required | ❌ Not used | ❌ Not used | Uses yfinance by default; FMP optional via --api-key |
 | **Macro Regime Detector** | ✅ Required | ❌ Not used | ❌ Not used | Cross-asset ETF ratio analysis |
 | **Market Breadth Analyzer** | ❌ Not used | ❌ Not used | ❌ Not used | Uses free GitHub CSV data |
 | **Uptrend Analyzer** | ❌ Not used | ❌ Not used | ❌ Not used | Uses free GitHub CSV data |

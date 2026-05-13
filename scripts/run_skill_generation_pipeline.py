@@ -19,6 +19,12 @@ import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# Add scripts directory to sys.path to import gemini_adapter
+scripts_dir = Path(__file__).parent
+if str(scripts_dir) not in sys.path:
+    sys.path.append(str(scripts_dir))
+import gemini_adapter
+
 import yaml
 
 logger = logging.getLogger("skill_generation")
@@ -37,9 +43,7 @@ SUMMARY_DIR = "reports/skill-generation-log"
 LOG_DIR = "logs"
 
 # Limits
-CLAUDE_TIMEOUT = 600
-CLAUDE_BUDGET_MINE = 1.00
-CLAUDE_BUDGET_SCORE = 0.50
+GEMINI_TIMEOUT = 600   # renamed from CLAUDE_TIMEOUT
 HISTORY_LIMIT = 60
 LOG_RETENTION_DAYS = 30
 
@@ -48,8 +52,6 @@ DESIGN_SCORE_THRESHOLD = 70
 MAX_DESIGN_ITERATIONS = 2  # initial review + 1 improvement pass
 MAX_RETRIES = 1  # retry count for design_failed/pr_failed
 MIN_TRADING_VALUE = 15  # skip ideas with trading_value below this threshold
-CLAUDE_BUDGET_DESIGN = 3.00
-CLAUDE_BUDGET_REVISE = 2.00
 DESIGN_TIMEOUT = 1200
 
 
@@ -150,10 +152,10 @@ def run_mine(project_root: Path, dry_run: bool = False) -> Path | None:
             capture_output=True,
             text=True,
             check=False,
-            timeout=CLAUDE_TIMEOUT,
+            timeout=GEMINI_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
-        logger.error("Mine script timed out after %d seconds.", CLAUDE_TIMEOUT)
+        logger.error("Mine script timed out after %d seconds.", GEMINI_TIMEOUT)
         return None
 
     if result.returncode != 0:
@@ -215,10 +217,10 @@ def run_score(
             capture_output=True,
             text=True,
             check=False,
-            timeout=CLAUDE_TIMEOUT,
+            timeout=GEMINI_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
-        logger.error("Score script timed out after %d seconds.", CLAUDE_TIMEOUT)
+        logger.error("Score script timed out after %d seconds.", GEMINI_TIMEOUT)
         return False
 
     if result.returncode != 0:
@@ -834,10 +836,6 @@ def design_skill(project_root: Path, idea: dict, skill_name: str, dry_run: bool 
         logger.info("[dry-run] Would design skill '%s'.", skill_name)
         return True
 
-    if not shutil.which("claude"):
-        logger.error("claude CLI not found; cannot design skill.")
-        return False
-
     design_script = project_root / DESIGN_SCRIPT
     if not design_script.exists():
         logger.error("Design script not found: %s", design_script)
@@ -876,33 +874,16 @@ def design_skill(project_root: Path, idea: dict, skill_name: str, dry_run: bool 
             logger.error("build_design_prompt produced empty output.")
             return False
 
-        # Invoke claude -p with the design prompt
-        # Remove CLAUDECODE env var to allow claude -p from within Claude Code terminals
-        env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-        result = subprocess.run(
-            [
-                "claude",
-                "-p",
-                "--allowedTools",
-                "Read,Edit,Write,Glob,Grep",
-                f"--max-budget-usd={CLAUDE_BUDGET_DESIGN}",
-            ],
-            input=prompt_text,
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=DESIGN_TIMEOUT,
-            env=env,
-        )
-        if result.returncode != 0:
-            logger.error("claude -p design failed: %s", result.stderr.strip()[:300])
+        # Invoke Gemini agent with the design prompt
+        success = gemini_adapter.run_gemini_agent(prompt_text, model_name="gemini-3-flash-preview")
+        if not success:
+            logger.error("Gemini design agent failed.")
             return False
 
-        # Gap A: Verify SKILL.md was actually created
+        # Verify SKILL.md was actually created by the Gemini agent
         skill_md = project_root / "skills" / skill_name / "SKILL.md"
         if not skill_md.exists():
-            logger.error("claude -p exited 0 but SKILL.md not created at %s.", skill_md)
+            logger.error("Gemini agent returned success but SKILL.md not created at %s.", skill_md)
             return False
 
         return True
@@ -918,47 +899,21 @@ def design_skill(project_root: Path, idea: dict, skill_name: str, dry_run: bool 
 
 
 def improve_skill(project_root: Path, skill_name: str, findings: list[str]) -> bool:
-    """Invoke claude -p to improve a skill based on review findings.
+    """Invoke Gemini agent to improve a skill based on review findings.
 
     Returns True on success, False on failure.
     """
-    if not shutil.which("claude"):
-        logger.error("claude CLI not found; cannot improve skill.")
-        return False
-
     prompt = (
         f"Improve the skill '{skill_name}' in skills/{skill_name}/ based on these findings:\n\n"
         + "\n".join(f"- {item}" for item in findings[:10])
         + "\n\nMake minimal, targeted edits to address the findings. Do not change unrelated code."
     )
 
-    try:
-        # Remove CLAUDECODE env var to allow claude -p from within Claude Code terminals
-        env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-        result = subprocess.run(
-            [
-                "claude",
-                "-p",
-                "--allowedTools",
-                "Read,Edit,Write,Glob,Grep",
-                f"--max-budget-usd={CLAUDE_BUDGET_REVISE}",
-            ],
-            input=prompt,
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=DESIGN_TIMEOUT,
-            env=env,
-        )
-        if result.returncode != 0:
-            logger.error("claude -p improve failed: %s", result.stderr.strip()[:300])
-            return False
-        return True
-
-    except subprocess.TimeoutExpired:
-        logger.error("Improve step timed out after %d seconds.", DESIGN_TIMEOUT)
+    success = gemini_adapter.run_gemini_agent(prompt, model_name="gemini-3-flash-preview")
+    if not success:
+        logger.error("Gemini improvement agent failed.")
         return False
+    return True
 
 
 # -- Daily flow: review and improve loop --
